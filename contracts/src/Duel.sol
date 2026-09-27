@@ -45,6 +45,8 @@ contract Duel {
         bool awaitingVerdict;
         uint256 deckA;
         uint256 deckB;
+        // 0 not finished, 1 a won, 2 b won, 3 draw or cancelled
+        uint8 result;
     }
 
     CardStats public immutable cards;
@@ -103,6 +105,18 @@ contract Duel {
         return matches[id];
     }
 
+    function resultOf(uint256 id) external view returns (uint8) {
+        return matches[id].result;
+    }
+
+    // spectators can back a side until the first card of the match is revealed
+    function bettingOpen(uint256 id) external view returns (bool) {
+        Match storage m = matches[id];
+        if (m.a == address(0)) return false;
+        if (m.state == State.Open) return true;
+        return m.state == State.Playing && m.round == 0 && !m.revealedA && !m.revealedB;
+    }
+
     function create(uint16[5] calldata deck) external payable returns (uint256 id) {
         if (msg.value == 0) revert WrongStake();
         uint256 bits = _deckBits(deck);
@@ -139,6 +153,7 @@ contract Duel {
         if (m.state != State.Open || m.a == address(0)) revert WrongState();
         if (msg.sender != m.a) revert NotPlayer();
         m.state = State.Done;
+        m.result = 3;
         _pay(m.a, m.stake);
         emit Cancelled(id);
     }
@@ -304,6 +319,7 @@ contract Duel {
 
     function _finish(uint256 id, Match storage m, address winner) internal {
         m.state = State.Done;
+        m.result = winner == m.a ? 1 : winner == m.b ? 2 : 3;
         uint256 pot = m.stake * 2;
         if (winner == address(0)) {
             _pay(m.a, m.stake);
