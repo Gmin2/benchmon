@@ -1,12 +1,21 @@
 // a fighter or judge: sends one prompt, returns the text, latency and cost
-export type Reply = { text: string; ms: number; costUsd: number };
+export type Reply = { text: string; ms: number; costUsd: number; finish?: string };
 
 export interface Model {
   name: string;
   ask(prompt: string, system?: string): Promise<Reply>;
 }
 
-type ChatOpts = { baseUrl: string; apiKey: string; model: string; name: string; inPerM?: number; outPerM?: number };
+type ChatOpts = {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  name: string;
+  inPerM?: number;
+  outPerM?: number;
+  // openrouter reasoning settings; fighters run with it off so every model answers under the same rules
+  reasoning?: Record<string, unknown>;
+};
 
 // any openai compatible chat endpoint: openrouter for the fighters, moonshot for kimi
 export function chatModel(o: ChatOpts): Model {
@@ -20,19 +29,21 @@ export function chatModel(o: ChatOpts): Model {
         body: JSON.stringify({
           model: o.model,
           temperature: 0,
-          max_tokens: 200,
+          // reasoning models spend hidden tokens before answering; some ignore effort low and use the whole budget
+          max_tokens: 1500,
+          ...(o.reasoning ? { reasoning: o.reasoning } : {}),
           messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }],
         }),
       });
       const ms = performance.now() - t0;
       if (!res.ok) throw new Error(`${o.name} ${res.status}: ${(await res.text()).slice(0, 300)}`);
       const j = (await res.json()) as {
-        choices: { message: { content: string } }[];
+        choices: { message: { content: string }; finish_reason?: string }[];
         usage?: { prompt_tokens: number; completion_tokens: number; cost?: number };
       };
       const u = j.usage;
       const costUsd = u?.cost ?? (u ? (u.prompt_tokens * (o.inPerM ?? 0) + u.completion_tokens * (o.outPerM ?? 0)) / 1e6 : 0);
-      return { text: j.choices[0]?.message.content?.trim() ?? "", ms, costUsd };
+      return { text: j.choices[0]?.message.content?.trim() ?? "", ms, costUsd, finish: j.choices[0]?.finish_reason };
     },
   };
 }

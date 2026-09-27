@@ -12,10 +12,14 @@ import type { LiveDuel } from "./watcher";
 function fighter(card: number): Model {
   const r = ROSTER[card];
   if (!r) throw new Error(`card ${card} has no model`);
-  return chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: r.openrouter, name: r.name });
+  return chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: r.openrouter, name: r.name, reasoning: r.reasoning });
 }
 
-const judge = () => chatModel({ baseUrl: config.moonshotBase, apiKey: config.moonshotKey, model: config.judgeModel, name: "kimi" });
+// kimi judges. straight from moonshot when a key is set, otherwise kimi through openrouter
+const judge = () =>
+  config.moonshotKey
+    ? chatModel({ baseUrl: config.moonshotBase, apiKey: config.moonshotKey, model: config.judgeModel, name: "kimi" })
+    : chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: "moonshotai/kimi-k3", name: "kimi" });
 
 // runs the real duel, keeps the full transcript, and posts the verdict with the transcript hash
 export async function judgeLiveDuel(d: LiveDuel) {

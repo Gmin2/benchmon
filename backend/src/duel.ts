@@ -41,6 +41,14 @@ export async function runDuel(arena: number, seed: `0x${string}`, fa: Model, fb:
   const b = { ...rb, model: fb.name, correct: isCorrect(prompt, rb.text) };
   const base = { prompt, a, b };
 
+  // no answer at all (empty, or cut off before any text) loses to a real one
+  const emptyA = a.text.length === 0;
+  const emptyB = b.text.length === 0;
+  if (emptyA || emptyB) {
+    if (emptyA && emptyB) return { ...base, outcome: 0, reason: "neither model answered" };
+    return { ...base, outcome: emptyA ? 2 : 1, reason: "only one model answered" };
+  }
+
   if (prompt.answer !== undefined && a.correct !== b.correct) {
     return { ...base, outcome: a.correct ? 1 : 2, reason: "only one answer was correct" };
   }

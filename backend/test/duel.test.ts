@@ -60,4 +60,11 @@ describe("runDuel", () => {
     expect(r.outcome).toBe(1);
     expect(r.judge).toEqual({ first: 1, second: 1 });
   });
+  test("an empty answer loses, two empty answers draw without asking the judge", async () => {
+    let judged = false;
+    const j: Model = { name: "j", ask: async () => ((judged = true), { text: "1", ms: 1, costUsd: 0 }) };
+    expect((await runDuel(5, seed, fake("a", ""), fake("b", "real answer"), j)).outcome).toBe(2);
+    expect((await runDuel(5, seed, fake("a", ""), fake("b", ""), j)).outcome).toBe(0);
+    expect(judged).toBe(false);
+  });
 });
