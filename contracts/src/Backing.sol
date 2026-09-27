@@ -1,25 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Duel} from "./Duel.sol";
+import {IBacking} from "./interfaces/IBacking.sol";
+import {IDuel} from "./interfaces/IDuel.sol";
 
 // spectators back player a or b of a match. when the match ends the backers of the winner split the
 // whole pool pro rata. a draw, a cancel, or a side nobody backed refunds everyone.
-contract Backing {
-    Duel public immutable duel;
+contract Backing is IBacking {
+    IDuel public immutable duel;
 
     mapping(uint256 => uint256[3]) public totals; // [unused, side a, side b]
     mapping(uint256 => mapping(address => uint256[3])) public backed;
 
-    event Backed(uint256 indexed id, address indexed who, uint8 side, uint256 amount);
-    event Claimed(uint256 indexed id, address indexed who, uint256 amount);
-
-    error Closed();
-    error BadSide();
-    error NotFinished();
-    error NothingToClaim();
-
-    constructor(Duel _duel) {
+    constructor(IDuel _duel) {
         duel = _duel;
     }
 

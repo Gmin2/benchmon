@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IBacking} from "../src/interfaces/IBacking.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
@@ -69,7 +70,7 @@ contract BackingTest is Test {
         assertEq(x.balance, 6 ether);
         assertEq(y.balance, 2 ether);
         vm.prank(z);
-        vm.expectRevert(Backing.NothingToClaim.selector);
+        vm.expectRevert(IBacking.NothingToClaim.selector);
         backing.claim(id);
         assertEq(address(backing).balance, 0);
     }
@@ -87,7 +88,7 @@ contract BackingTest is Test {
         address late = makeAddr("late");
         vm.deal(late, 1 ether);
         vm.prank(late);
-        vm.expectRevert(Backing.Closed.selector);
+        vm.expectRevert(IBacking.Closed.selector);
         backing.back{value: 1 ether}(id, 1);
     }
 
@@ -120,10 +121,10 @@ contract BackingTest is Test {
         address x = makeAddr("x");
         _back(x, id, 1, 1 ether);
         vm.prank(x);
-        vm.expectRevert(Backing.NotFinished.selector);
+        vm.expectRevert(IBacking.NotFinished.selector);
         backing.claim(id);
         vm.prank(x);
-        vm.expectRevert(Backing.BadSide.selector);
+        vm.expectRevert(IBacking.BadSide.selector);
         backing.back{value: 0}(id, 3);
     }
 
@@ -173,5 +174,22 @@ contract BackingTest is Test {
         assertLe(paid, pool);
         assertLt(pool - paid, 6);
         assertEq(address(backing).balance, pool - paid);
+    }
+
+    function test_zeroAndDoubleClaim() public {
+        uint256 id = _start();
+        vm.expectRevert(IBacking.NothingToClaim.selector);
+        backing.back{value: 0}(id, 1);
+        vm.expectRevert(IBacking.Closed.selector);
+        backing.back{value: 1}(999, 1);
+        address x = makeAddr("x");
+        _back(x, id, 1, 1 ether);
+        _round(id, 0, 1);
+        _round(id, 2, 3);
+        vm.prank(x);
+        backing.claim(id);
+        vm.prank(x);
+        vm.expectRevert(IBacking.NothingToClaim.selector);
+        backing.claim(id);
     }
 }

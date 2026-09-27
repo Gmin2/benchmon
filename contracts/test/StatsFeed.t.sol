@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {ICardStats} from "../src/interfaces/ICardStats.sol";
+import {IStatsFeed} from "../src/interfaces/IStatsFeed.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
-import {StatsFeed, IReceiver, IERC165} from "../src/StatsFeed.sol";
+import {StatsFeed} from "../src/StatsFeed.sol";
+import {IReceiver, IERC165} from "../src/interfaces/IReceiver.sol";
 
 contract StatsFeedTest is Test {
     CardStats cards;
@@ -34,22 +38,22 @@ contract StatsFeedTest is Test {
     }
 
     function test_onlyForwarder() public {
-        vm.expectRevert(StatsFeed.NotForwarder.selector);
+        vm.expectRevert(IStatsFeed.NotForwarder.selector);
         feed.onReport("", _report(0, 77));
         vm.prank(makeAddr("x"));
-        vm.expectRevert(StatsFeed.NotOwner.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         feed.setForwarder(makeAddr("x"));
     }
 
     function test_badReports() public {
         vm.prank(forwarder);
-        vm.expectRevert(CardStats.BadStat.selector);
+        vm.expectRevert(ICardStats.BadStat.selector);
         feed.onReport("", _report(0, 0));
         uint256[] memory ids = new uint256[](2);
         uint8[6][] memory s = new uint8[6][](1);
         s[0] = [uint8(1), 1, 1, 1, 1, 1];
         vm.prank(forwarder);
-        vm.expectRevert(StatsFeed.BadReport.selector);
+        vm.expectRevert(IStatsFeed.BadReport.selector);
         feed.onReport("", abi.encode(ids, s));
     }
 
@@ -57,5 +61,16 @@ contract StatsFeedTest is Test {
         assertTrue(feed.supportsInterface(type(IReceiver).interfaceId));
         assertTrue(feed.supportsInterface(type(IERC165).interfaceId));
         assertFalse(feed.supportsInterface(0xdeadbeef));
+    }
+
+    function test_ownerMovesToTheProductionForwarder() public {
+        address prod = makeAddr("prod");
+        feed.setForwarder(prod);
+        vm.prank(forwarder);
+        vm.expectRevert(IStatsFeed.NotForwarder.selector);
+        feed.onReport("", _report(0, 60));
+        vm.prank(prod);
+        feed.onReport("", _report(0, 60));
+        assertEq(cards.statsOf(0)[0], 60);
     }
 }

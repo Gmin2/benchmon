@@ -2,12 +2,15 @@
 pragma solidity ^0.8.24;
 
 import {FixedPointMathLib as M} from "solady/utils/FixedPointMathLib.sol";
-import {Duel} from "./Duel.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {IMatchMarket} from "./interfaces/IMatchMarket.sol";
+import {IDuel} from "./interfaces/IDuel.sol";
 
 // one small prediction market per match (lmsr). the house seeds it with liquidity b and can lose at most
 // b * ln 2. a share of the winning side pays 1 MON, a draw or a cancel pays 0.5 MON per share on either side.
 // trading follows the same window as backing: open until the first card of the match is revealed.
-contract MatchMarket {
+// the owner is the house.
+contract MatchMarket is IMatchMarket, Ownable {
     struct Market {
         uint256 b; // liquidity, wad
         uint256 qA; // shares sold on a, wad
@@ -20,31 +23,17 @@ contract MatchMarket {
     // below this the exp and ln rounding is larger than the trade itself
     uint256 public constant MIN_TRADE = 1e12;
 
-    Duel public immutable duel;
-    address public house;
+    IDuel public immutable duel;
     mapping(uint256 => Market) public markets;
     mapping(uint256 => mapping(address => uint256[3])) public shares; // [unused, a, b]
 
-    event Opened(uint256 indexed id, uint256 b, uint256 seed);
-    event Traded(uint256 indexed id, address indexed who, uint8 side, int256 shares, int256 cost, uint256 priceA);
-    event Redeemed(uint256 indexed id, address indexed who, uint256 amount);
-
-    error NotHouse();
-    error AlreadyOpen();
-    error NoMarket();
-    error Closed();
-    error BadSide();
-    error TooLittle();
-    error NotFinished();
-
-    constructor(Duel _duel) {
+    constructor(IDuel _duel) {
         duel = _duel;
-        house = msg.sender;
+        _initializeOwner(msg.sender);
     }
 
     // the house seeds a market; the seed must cover the worst case loss b * ln 2
-    function open(uint256 id, uint256 b) external payable {
-        if (msg.sender != house) revert NotHouse();
+    function open(uint256 id, uint256 b) external payable onlyOwner {
         if (markets[id].b != 0) revert AlreadyOpen();
         if (!duel.bettingOpen(id)) revert Closed();
         if (b == 0 || msg.value < maxLoss(b)) revert TooLittle();
@@ -129,8 +118,7 @@ contract MatchMarket {
     }
 
     // what the house gets back once the match is over: collateral minus everything the shares can claim
-    function houseSettle(uint256 id) external {
-        if (msg.sender != house) revert NotHouse();
+    function houseSettle(uint256 id) external onlyOwner {
         Market storage m = markets[id];
         uint8 r = duel.resultOf(id);
         if (r == 0) revert NotFinished();
@@ -138,7 +126,8 @@ contract MatchMarket {
         uint256 owed = r == 1 ? m.qA : r == 2 ? m.qB : (m.qA + m.qB) / 2;
         m.settledHouse = true;
         uint256 left = m.collateral - owed;
-        _pay(house, left);
+        emit HouseSettled(id, left);
+        _pay(msg.sender, left);
     }
 
     function _live(uint256 id, uint8 side) internal view returns (Market storage m) {

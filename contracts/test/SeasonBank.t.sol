@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {ISeasonBank} from "../src/interfaces/ISeasonBank.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {SeasonBank} from "../src/SeasonBank.sol";
@@ -47,7 +49,7 @@ contract SeasonBankTest is Test {
         assertTrue(bank.hasPass(player, 1));
         assertEq(bank.credit(player), 3e6);
         vm.prank(player);
-        vm.expectRevert(SeasonBank.AlreadyHasPass.selector);
+        vm.expectRevert(ISeasonBank.AlreadyHasPass.selector);
         bank.buyPass(1);
         vm.prank(player);
         bank.withdraw(3e6);
@@ -65,13 +67,13 @@ contract SeasonBankTest is Test {
 
     function test_guards() public {
         vm.prank(player);
-        vm.expectRevert(SeasonBank.NoCredit.selector);
+        vm.expectRevert(ISeasonBank.NoCredit.selector);
         bank.buyPass(1);
         vm.prank(player);
-        vm.expectRevert(SeasonBank.NoCredit.selector);
+        vm.expectRevert(ISeasonBank.NoCredit.selector);
         bank.withdraw(1);
         vm.prank(player);
-        vm.expectRevert(SeasonBank.NotOwner.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         bank.collect(player);
     }
 
@@ -99,5 +101,19 @@ contract SeasonBankTest is Test {
             sum += bank.credit(ps[i]);
         }
         assertEq(usdc.balanceOf(address(bank)), sum);
+    }
+
+    function test_priceChangeAndZeroDeposit() public {
+        bank.setPassPrice(1e6);
+        assertEq(bank.passPrice(), 1e6);
+        vm.prank(player);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        bank.setPassPrice(0);
+        vm.prank(intermediary);
+        vm.expectRevert(ISeasonBank.ZeroAmount.selector);
+        bank.deposit(player, 0);
+        vm.prank(intermediary);
+        vm.expectRevert(ISeasonBank.ZeroAmount.selector);
+        bank.deposit(address(0), 1e6);
     }
 }

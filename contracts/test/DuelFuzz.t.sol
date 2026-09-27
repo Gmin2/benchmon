@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IDuel} from "../src/interfaces/IDuel.sol";
+import {ICardStats} from "../src/interfaces/ICardStats.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
@@ -31,7 +33,7 @@ contract CardStatsFuzzTest is Test {
             }
         }
         if (!found) {
-            vm.expectRevert(CardStats.NoCard.selector);
+            vm.expectRevert(ICardStats.NoCard.selector);
             c.statsAt(0, probe);
         } else {
             assertEq(c.statsAt(0, probe)[0], want);
@@ -104,7 +106,7 @@ contract DuelFuzzTest is Test {
 
         uint8 winsA;
         uint8 winsB;
-        for (uint16 r; r < 3 && duel.getMatch(id).state == Duel.State.Playing; r++) {
+        for (uint16 r; r < 3 && duel.getMatch(id).state == IDuel.State.Playing; r++) {
             uint8 arena = duel.getMatch(id).arena;
             uint16 ca = r;
             uint16 cb = r + 3;
@@ -114,7 +116,15 @@ contract DuelFuzzTest is Test {
             _move(id, ca, cb, keccak256(abi.encode(salt, r, "a")), keccak256(abi.encode(salt, r, "b")));
         }
 
-        assertEq(uint8(duel.getMatch(id).state), uint8(Duel.State.Done));
+        assertEq(uint8(duel.getMatch(id).state), uint8(IDuel.State.Done));
+        if (duel.owed(alice) > 0) {
+            vm.prank(alice);
+            duel.withdraw();
+        }
+        if (duel.owed(bob) > 0) {
+            vm.prank(bob);
+            duel.withdraw();
+        }
         assertEq(address(duel).balance, 0);
         assertEq(alice.balance + bob.balance, before);
         if (winsA > winsB) assertEq(alice.balance, 1000 ether + stake);
@@ -132,7 +142,7 @@ contract DuelFuzzTest is Test {
         vm.prank(bob);
         duel.commit(id, keccak256(abi.encode(id, uint8(0), bob, uint16(1), bytes32("b"))));
         vm.prank(alice);
-        vm.expectRevert(Duel.BadReveal.selector);
+        vm.expectRevert(IDuel.BadReveal.selector);
         duel.reveal(id, fake, fakeSalt);
     }
 
@@ -150,8 +160,8 @@ contract DuelFuzzTest is Test {
         vm.prank(bob);
         try duel.reveal(id, 1, "b") {} catch {}
         vm.warp(block.timestamp + 61);
-        if (duel.getMatch(id).state == Duel.State.Playing) duel.claimTimeout(id);
-        assertLe(alice.balance, 1000 ether, "a fake card won money");
+        if (duel.getMatch(id).state == IDuel.State.Playing) duel.claimTimeout(id);
+        assertLe(duel.owed(alice), 1 ether, "a fake card won money");
     }
 }
 
@@ -229,8 +239,8 @@ contract Handler is Test {
     function playRound(uint256 pick, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb, bool skipB) external {
         if (ids.length == 0) return;
         uint256 id = ids[pick % ids.length];
-        Duel.Match memory m = duel.getMatch(id);
-        if (m.state != Duel.State.Playing) return;
+        IDuel.Match memory m = duel.getMatch(id);
+        if (m.state != IDuel.State.Playing) return;
         ca = uint16(bound(ca, 0, 9));
         cb = uint16(bound(cb, 0, 9));
         vm.prank(m.a);
@@ -243,7 +253,7 @@ contract Handler is Test {
         vm.prank(m.b);
         try duel.reveal(id, cb, sb) {} catch {}
         if (duel.getMatch(id).round > m.round) roundsPlayed++;
-        if (duel.getMatch(id).state == Duel.State.Done) finished++;
+        if (duel.getMatch(id).state == IDuel.State.Done) finished++;
     }
 
     uint256 public roundsPlayed;
@@ -265,8 +275,8 @@ contract Handler is Test {
         if (ids.length == 0) return;
         uint256 id = ids[pick % ids.length];
         for (uint16 r; r < 3; r++) {
-            Duel.Match memory m = duel.getMatch(id);
-            if (m.state != Duel.State.Playing || m.awaitingVerdict || m.commitA != 0 || m.commitB != 0) return;
+            IDuel.Match memory m = duel.getMatch(id);
+            if (m.state != IDuel.State.Playing || m.awaitingVerdict || m.commitA != 0 || m.commitB != 0) return;
             uint16 ca = _pickFrom(m.deckA & ~m.usedA, seed + r);
             uint16 cb = _pickFrom(m.deckB & ~m.usedB, seed / 7 + r);
             bytes32 sa = keccak256(abi.encode(seed, r, 1));
@@ -291,6 +301,11 @@ contract Handler is Test {
         return opts[seed % n];
     }
 
+    function withdraw(uint256 who) external {
+        vm.prank(_actor(who));
+        try duel.withdraw() {} catch {}
+    }
+
     function cancel(uint256 who, uint256 pick) external {
         if (ids.length == 0) return;
         vm.prank(_actor(who));
@@ -299,8 +314,8 @@ contract Handler is Test {
 
     function done() external view returns (uint256 n, uint256 rounds) {
         for (uint256 i; i < ids.length; i++) {
-            Duel.Match memory m = duel.getMatch(ids[i]);
-            if (m.state == Duel.State.Done) n++;
+            IDuel.Match memory m = duel.getMatch(ids[i]);
+            if (m.state == IDuel.State.Done) n++;
             rounds += m.round;
         }
     }
@@ -313,9 +328,12 @@ contract Handler is Test {
 
     function expected() external view returns (uint256 sum) {
         for (uint256 i; i < ids.length; i++) {
-            Duel.Match memory m = duel.getMatch(ids[i]);
-            if (m.state == Duel.State.Open) sum += m.stake;
-            else if (m.state == Duel.State.Playing) sum += 2 * m.stake;
+            IDuel.Match memory m = duel.getMatch(ids[i]);
+            if (m.state == IDuel.State.Open) sum += m.stake;
+            else if (m.state == IDuel.State.Playing) sum += 2 * m.stake;
+        }
+        for (uint256 i; i < 3; i++) {
+            sum += duel.owed(actors[i]);
         }
     }
 }
@@ -336,7 +354,7 @@ contract DuelInvariantTest is Test {
         handler = new Handler(duel);
         duel.setJudge(address(handler));
         targetContract(address(handler));
-        bytes4[] memory sel = new bytes4[](10);
+        bytes4[] memory sel = new bytes4[](11);
         sel[0] = Handler.create.selector;
         sel[1] = Handler.join.selector;
         sel[2] = Handler.commit.selector;
@@ -347,6 +365,7 @@ contract DuelInvariantTest is Test {
         sel[7] = Handler.verdict.selector;
         sel[8] = Handler.verdictByStats.selector;
         sel[9] = Handler.playToLive.selector;
+        sel[10] = Handler.withdraw.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 

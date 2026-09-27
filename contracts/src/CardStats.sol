@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+import {ICardStats} from "./interfaces/ICardStats.sol";
+
 // stats per model card: code, math, reasoning, speed, cost, honesty (1 to 99).
 // every update bumps a global version and keeps history, so a match can read the
 // stats as they were when it started, even if the oracle updates them mid match.
-contract CardStats {
+contract CardStats is ICardStats, Ownable {
     uint8 public constant STAT_COUNT = 6;
 
     struct Entry {
@@ -12,32 +15,23 @@ contract CardStats {
         uint8[6] stats;
     }
 
-    address public owner;
     address public updater;
     uint64 public version;
     uint256 public cardCount;
     mapping(uint256 => Entry[]) internal history;
     mapping(uint256 => string) public names;
 
-    event CardSet(uint256 indexed id, uint64 version, string name, uint8[6] stats);
-    event UpdaterSet(address updater);
-
-    error NotAllowed();
-    error BadStat();
-    error NoCard();
-
     constructor() {
-        owner = msg.sender;
+        _initializeOwner(msg.sender);
     }
 
-    function setUpdater(address u) external {
-        if (msg.sender != owner) revert NotAllowed();
+    function setUpdater(address u) external onlyOwner {
         updater = u;
         emit UpdaterSet(u);
     }
 
     function setCard(uint256 id, string calldata name, uint8[6] calldata s) external {
-        if (msg.sender != owner && msg.sender != updater) revert NotAllowed();
+        if (msg.sender != owner() && msg.sender != updater) revert NotAllowed();
         _set(id, name, s);
     }
 
@@ -59,7 +53,7 @@ contract CardStats {
     }
 
     // stats as of a version: the newest entry with entry.version <= v
-    function statsAt(uint256 id, uint64 v) public view returns (uint8[6] memory) {
+    function statsAt(uint256 id, uint64 v) external view returns (uint8[6] memory) {
         Entry[] storage h = history[id];
         uint256 lo;
         uint256 hi = h.length;

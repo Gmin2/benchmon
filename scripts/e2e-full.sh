@@ -60,6 +60,10 @@ fi
 echo "result $(field 23) (1 a, 2 b, 3 draw), wins a $(field 6), wins b $(field 7)"
 
 for K in "$KEY_A" "$KEY_B"; do
+  o=$(cast call --rpc-url "$RPC_URL" "$DUEL" "owed(address)(uint256)" "$(cast wallet address "$K")" | cut -d' ' -f1)
+  [ "$o" != "0" ] && send "$K" "$DUEL" "withdraw()" && echo "duel paid $(cast from-wei $o) to $(cast wallet address "$K")"
+done
+for K in "$KEY_A" "$KEY_B"; do
   W=$(cast wallet address "$K")
   c=$(cast call --rpc-url "$RPC_URL" "$BACKING" "claimable(uint256,address)(uint256)" "$ID" "$W" | cut -d' ' -f1)
   [ "$c" != "0" ] && send "$K" "$BACKING" "claim(uint256)" "$ID" && echo "backing paid $(cast from-wei $c) to $W"

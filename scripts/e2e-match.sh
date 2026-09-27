@@ -53,5 +53,9 @@ play 2 1
 
 M=$(cast call --rpc-url "$RPC_URL" "$DUEL" "getMatch(uint256)((address,address,uint256,uint8,uint8,uint8,uint8,uint8,uint64,bytes32,bytes32,bool,bool,uint16,uint16,bytes32,uint256,uint256,uint64,bool,uint256,uint256))" "$ID" | tr -d '()')
 echo "$M" | awk -F', ' '{print "state", $4, "(2 = done), rounds", $5, ", wins a", $6, ", wins b", $7}'
+for K in "$KEY_A" "$KEY_B"; do
+  o=$(cast call --rpc-url "$RPC_URL" "$DUEL" "owed(address)(uint256)" "$(cast wallet address "$K")" | cut -d' ' -f1)
+  [ "$o" != "0" ] && send "$K" "$DUEL" "withdraw()" && echo "duel paid $(cast from-wei $o) to $(cast wallet address "$K")"
+done
 echo "duel balance after: $(cast balance --ether --rpc-url "$RPC_URL" "$DUEL")"
 echo "a $A  b $B"

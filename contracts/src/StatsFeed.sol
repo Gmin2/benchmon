@@ -1,41 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {CardStats} from "./CardStats.sol";
-
-interface IERC165 {
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-}
-
-// chainlink cre receiver interface: the keystone forwarder calls onReport after the don signs a report
-interface IReceiver is IERC165 {
-    function onReport(bytes calldata metadata, bytes calldata report) external;
-}
+import {Ownable} from "solady/auth/Ownable.sol";
+import {IStatsFeed} from "./interfaces/IStatsFeed.sol";
+import {IReceiver, IERC165} from "./interfaces/IReceiver.sol";
+import {ICardStats} from "./interfaces/ICardStats.sol";
 
 // takes benchmark stats from a chainlink cre workflow and writes them into CardStats. only the forwarder it
 // trusts can deliver a report. report = abi.encode(uint256[] ids, uint8[6][] stats)
-contract StatsFeed is IReceiver {
-    CardStats public immutable cards;
-    address public owner;
+contract StatsFeed is IStatsFeed, Ownable {
+    ICardStats public immutable cards;
     address public forwarder;
     uint256 public reports;
 
-    event ForwarderSet(address forwarder);
-    event ReportApplied(uint256 indexed n, uint256 cards);
-
-    error NotForwarder();
-    error NotOwner();
-    error BadReport();
-
-    constructor(CardStats _cards, address _forwarder) {
+    constructor(ICardStats _cards, address _forwarder) {
         cards = _cards;
-        owner = msg.sender;
         forwarder = _forwarder;
+        _initializeOwner(msg.sender);
     }
 
     // the simulation forwarder for the demo, the production one once the workflow is deployed to a don
-    function setForwarder(address f) external {
-        if (msg.sender != owner) revert NotOwner();
+    function setForwarder(address f) external onlyOwner {
         forwarder = f;
         emit ForwarderSet(f);
     }

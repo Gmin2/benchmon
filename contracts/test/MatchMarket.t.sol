@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IMatchMarket} from "../src/interfaces/IMatchMarket.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
@@ -72,7 +74,7 @@ contract MatchMarketTest is Test {
         market.redeem(id);
         assertEq(x.balance - before, 5 ether);
         vm.prank(y);
-        vm.expectRevert(MatchMarket.TooLittle.selector);
+        vm.expectRevert(IMatchMarket.TooLittle.selector);
         market.redeem(id);
         uint256 houseBefore = address(this).balance;
         market.houseSettle(id);
@@ -83,10 +85,10 @@ contract MatchMarketTest is Test {
     function test_closedAfterFirstRevealAndSeedRules() public {
         vm.prank(alice);
         uint256 id = duel.create{value: 1 ether}(deck);
-        vm.expectRevert(MatchMarket.TooLittle.selector);
+        vm.expectRevert(IMatchMarket.TooLittle.selector);
         market.open{value: 1 ether}(id, B);
         vm.prank(alice);
-        vm.expectRevert(MatchMarket.NotHouse.selector);
+        vm.expectRevert(Ownable.Unauthorized.selector);
         market.open{value: 10 ether}(id, B);
         vm.prank(bob);
         duel.join{value: 1 ether}(id, deck);
@@ -101,7 +103,7 @@ contract MatchMarketTest is Test {
         address late = makeAddr("late");
         vm.deal(late, 10 ether);
         vm.prank(late);
-        vm.expectRevert(MatchMarket.Closed.selector);
+        vm.expectRevert(IMatchMarket.Closed.selector);
         market.buy{value: 10 ether}(id, 1, 1 ether);
     }
 
@@ -158,5 +160,55 @@ contract MatchMarketTest is Test {
         // houseSettle reverts if the collateral cannot cover what the shares claim
         market.houseSettle(id);
         assertLe(address(market).balance, 8, "dust above a few wei");
+    }
+
+    function test_guards() public {
+        vm.prank(alice);
+        uint256 id = duel.create{value: 1 ether}(deck);
+        // no market yet
+        vm.expectRevert(IMatchMarket.NoMarket.selector);
+        market.buy{value: 1 ether}(id, 1, 1 ether);
+        uint256 seed = market.maxLoss(B);
+        market.open{value: seed}(id, B);
+        vm.expectRevert(IMatchMarket.AlreadyOpen.selector);
+        market.open{value: seed}(id, B);
+        vm.expectRevert(IMatchMarket.BadSide.selector);
+        market.buy{value: 1 ether}(id, 3, 1 ether);
+        vm.expectRevert(IMatchMarket.TooLittle.selector);
+        market.buy{value: 1 ether}(id, 1, 1);
+        vm.expectRevert(IMatchMarket.TooLittle.selector);
+        market.buy{value: 0}(id, 1, 1 ether);
+        // cannot sell what you do not hold
+        vm.prank(bob);
+        vm.expectRevert(IMatchMarket.TooLittle.selector);
+        market.sell(id, 1, 1 ether);
+        // nothing to redeem or settle before the end
+        vm.expectRevert(IMatchMarket.NotFinished.selector);
+        market.redeem(id);
+        vm.expectRevert(IMatchMarket.NotFinished.selector);
+        market.houseSettle(id);
+        vm.prank(alice);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        market.houseSettle(id);
+        // cancel ends it; the house settles once, a second time fails
+        vm.prank(alice);
+        duel.cancel(id);
+        market.houseSettle(id);
+        vm.expectRevert(IMatchMarket.NoMarket.selector);
+        market.houseSettle(id);
+    }
+
+    function test_priceExtremesAndDraw() public {
+        uint256 id = _start();
+        address x = makeAddr("x");
+        _buy(x, id, 1, 200 ether); // pushes a far past the clamp at b = 10
+        assertGt(market.priceA(id), 0.99e18);
+        assertEq(market.priceA(999), 0.5e18);
+        // three drawn rounds: each share redeems for half
+        _round(id, 2, 4);
+        _round(id, 4, 2);
+        _round(id, 0, 0);
+        assertEq(duel.resultOf(id), 3);
+        assertEq(market.redeemable(id, x), 100 ether);
     }
 }

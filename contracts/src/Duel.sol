@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {CardStats} from "./CardStats.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {IDuel} from "./interfaces/IDuel.sol";
+import {ICardStats} from "./interfaces/ICardStats.sol";
 
 // two players stake the same amount, play 3 rounds of hidden card picks.
 // each round has an arena (one of the six stats); the higher stat wins the round.
@@ -9,94 +11,34 @@ import {CardStats} from "./CardStats.sol";
 // the third round is the live duel: both chosen models answer the same prompt off chain and the
 // judge posts the verdict with a hash of prompt, answers and verdict. if the judge goes quiet,
 // anyone can settle that round by stats after VERDICT_TIMEOUT, so money is never stuck.
-contract Duel {
+// payouts are credited and withdrawn by the player, so a player that cannot receive MON cannot block a match.
+contract Duel is IDuel, Ownable {
     uint8 public constant ROUNDS = 3;
     uint8 public constant LIVE_ROUND = 2;
     uint256 public constant MOVE_TIMEOUT = 60;
     uint256 public constant VERDICT_TIMEOUT = 10 minutes;
     uint8 public constant DECK_SIZE = 5;
 
-    enum State {
-        Open,
-        Playing,
-        Done
-    }
-
-    struct Match {
-        address a;
-        address b;
-        uint256 stake;
-        State state;
-        uint8 round;
-        uint8 winsA;
-        uint8 winsB;
-        uint8 arena;
-        uint64 deadline;
-        bytes32 commitA;
-        bytes32 commitB;
-        bool revealedA;
-        bool revealedB;
-        uint16 cardA;
-        uint16 cardB;
-        bytes32 seed;
-        uint256 usedA;
-        uint256 usedB;
-        uint64 statsVersion;
-        bool awaitingVerdict;
-        uint256 deckA;
-        uint256 deckB;
-        // 0 not finished, 1 a won, 2 b won, 3 draw or cancelled
-        uint8 result;
-    }
-
-    CardStats public immutable cards;
-    address public owner;
+    ICardStats public immutable cards;
     address public judge;
     // total power (sum of all six stats) a deck of five may have, so nobody just brings the five strongest models
     uint256 public deckCap = 1900;
     uint256 public matchCount;
     mapping(uint256 => Match) internal matches;
+    mapping(address => uint256) public owed;
 
-    event Created(uint256 indexed id, address indexed a, uint256 stake);
-    event Joined(uint256 indexed id, address indexed b, uint8 arena);
-    event Committed(uint256 indexed id, address indexed player, uint8 round);
-    event Revealed(uint256 indexed id, address indexed player, uint8 round, uint16 card);
-    event RoundWon(uint256 indexed id, uint8 round, address winner, uint8 nextArena);
-    event Finished(uint256 indexed id, address winner, uint256 payout);
-    event Cancelled(uint256 indexed id);
-    event LiveDuel(uint256 indexed id, uint16 cardA, uint16 cardB, uint8 arena);
-    event Verdict(uint256 indexed id, uint8 outcome, bytes32 duelHash, bool byJudge);
-    event JudgeSet(address judge);
-    event DeckCapSet(uint256 cap);
-
-    error WrongState();
-    error WrongStake();
-    error NotPlayer();
-    error AlreadyCommitted();
-    error NotCommitted();
-    error BadReveal();
-    error CardUsed();
-    error TooEarly();
-    error BadCard();
-    error NotJudge();
-    error BadOutcome();
-    error BadDeck();
-    error NotInDeck();
-
-    constructor(CardStats _cards, address _judge) {
+    constructor(ICardStats _cards, address _judge) {
         cards = _cards;
-        owner = msg.sender;
         judge = _judge;
+        _initializeOwner(msg.sender);
     }
 
-    function setDeckCap(uint256 cap) external {
-        if (msg.sender != owner) revert NotJudge();
+    function setDeckCap(uint256 cap) external onlyOwner {
         deckCap = cap;
         emit DeckCapSet(cap);
     }
 
-    function setJudge(address j) external {
-        if (msg.sender != owner) revert NotJudge();
+    function setJudge(address j) external onlyOwner {
         judge = j;
         emit JudgeSet(j);
     }
@@ -154,7 +96,7 @@ contract Duel {
         if (msg.sender != m.a) revert NotPlayer();
         m.state = State.Done;
         m.result = 3;
-        _pay(m.a, m.stake);
+        owed[m.a] += m.stake;
         emit Cancelled(id);
     }
 
@@ -322,16 +264,20 @@ contract Duel {
         m.result = winner == m.a ? 1 : winner == m.b ? 2 : 3;
         uint256 pot = m.stake * 2;
         if (winner == address(0)) {
-            _pay(m.a, m.stake);
-            _pay(m.b, m.stake);
+            owed[m.a] += m.stake;
+            owed[m.b] += m.stake;
         } else {
-            _pay(winner, pot);
+            owed[winner] += pot;
         }
         emit Finished(id, winner, winner == address(0) ? 0 : pot);
     }
 
-    function _pay(address to, uint256 amount) internal {
-        (bool ok,) = to.call{value: amount}("");
+    function withdraw() external {
+        uint256 amount = owed[msg.sender];
+        if (amount == 0) revert NothingOwed();
+        owed[msg.sender] = 0;
+        (bool ok,) = msg.sender.call{value: amount}("");
         require(ok, "pay failed");
+        emit Withdrawn(msg.sender, amount);
     }
 }

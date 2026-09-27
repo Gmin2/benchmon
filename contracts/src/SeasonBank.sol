@@ -2,38 +2,28 @@
 pragma solidity ^0.8.24;
 
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
+import {ISeasonBank} from "./interfaces/ISeasonBank.sol";
 
 // lives on monad mainnet. aurora intents brings usdc from another chain and calls deposit(player, amount)
 // from an intermediary account, so the money is credited to `player`, not to msg.sender. a player spends
 // credit on a season pass; the game reads PassBought and unlocks the season. unspent credit can be withdrawn.
-contract SeasonBank {
+contract SeasonBank is ISeasonBank, Ownable {
     using SafeTransferLib for address;
 
     address public immutable usdc;
-    address public owner;
     uint256 public passPrice;
     uint256 public revenue;
     mapping(address => uint256) public credit;
     mapping(address => mapping(uint256 => bool)) public hasPass;
 
-    event Deposited(address indexed player, address indexed from, uint256 amount);
-    event PassBought(address indexed player, uint256 indexed season, uint256 price);
-    event Withdrawn(address indexed player, uint256 amount);
-    event PriceSet(uint256 price);
-
-    error NotOwner();
-    error NoCredit();
-    error AlreadyHasPass();
-    error ZeroAmount();
-
     constructor(address _usdc, uint256 _passPrice) {
         usdc = _usdc;
-        owner = msg.sender;
+        _initializeOwner(msg.sender);
         passPrice = _passPrice;
     }
 
-    function setPassPrice(uint256 p) external {
-        if (msg.sender != owner) revert NotOwner();
+    function setPassPrice(uint256 p) external onlyOwner {
         passPrice = p;
         emit PriceSet(p);
     }
@@ -73,8 +63,7 @@ contract SeasonBank {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function collect(address to) external {
-        if (msg.sender != owner) revert NotOwner();
+    function collect(address to) external onlyOwner {
         uint256 r = revenue;
         revenue = 0;
         usdc.safeTransfer(to, r);

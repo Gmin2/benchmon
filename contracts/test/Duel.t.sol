@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IDuel} from "../src/interfaces/IDuel.sol";
+import {ICardStats} from "../src/interfaces/ICardStats.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
@@ -40,6 +42,17 @@ contract DuelTest is Test {
         duel.reveal(id, cb, "sb");
     }
 
+    function _cash() internal {
+        if (duel.owed(alice) > 0) {
+            vm.prank(alice);
+            duel.withdraw();
+        }
+        if (duel.owed(bob) > 0) {
+            vm.prank(bob);
+            duel.withdraw();
+        }
+    }
+
     function _start() internal returns (uint256 id) {
         vm.prank(alice);
         id = duel.create{value: 1 ether}(deck);
@@ -53,6 +66,7 @@ contract DuelTest is Test {
         _play(id, 2, 3); // draw round
         _play(id, 1, 0);
         // 1 win each after three rounds: draw, both refunded
+        _cash();
         assertEq(alice.balance, 10 ether);
         assertEq(bob.balance, 10 ether);
     }
@@ -61,9 +75,10 @@ contract DuelTest is Test {
         uint256 id = _start();
         _play(id, 0, 1);
         _play(id, 2, 4);
+        _cash();
         assertEq(alice.balance, 11 ether);
         assertEq(bob.balance, 9 ether);
-        assertEq(uint8(duel.getMatch(id).state), uint8(Duel.State.Done));
+        assertEq(uint8(duel.getMatch(id).state), uint8(IDuel.State.Done));
     }
 
     function test_badRevealReverts() public {
@@ -71,7 +86,7 @@ contract DuelTest is Test {
         _commit(alice, id, 0, "sa");
         _commit(bob, id, 1, "sb");
         vm.prank(alice);
-        vm.expectRevert(Duel.BadReveal.selector);
+        vm.expectRevert(IDuel.BadReveal.selector);
         duel.reveal(id, 1, "sa");
     }
 
@@ -81,17 +96,18 @@ contract DuelTest is Test {
         _commit(alice, id, 2, "x");
         _commit(bob, id, 1, "y");
         vm.prank(alice);
-        vm.expectRevert(Duel.CardUsed.selector);
+        vm.expectRevert(IDuel.CardUsed.selector);
         duel.reveal(id, 2, "x");
     }
 
     function test_timeoutPaysThePlayerWhoMoved() public {
         uint256 id = _start();
         _commit(alice, id, 0, "sa");
-        vm.expectRevert(Duel.TooEarly.selector);
+        vm.expectRevert(IDuel.TooEarly.selector);
         duel.claimTimeout(id);
         vm.warp(block.timestamp + 61);
         duel.claimTimeout(id);
+        _cash();
         assertEq(alice.balance, 11 ether);
         assertEq(bob.balance, 9 ether);
     }
@@ -104,6 +120,7 @@ contract DuelTest is Test {
         duel.reveal(id, 1, "sb");
         vm.warp(block.timestamp + 61);
         duel.claimTimeout(id);
+        _cash();
         assertEq(bob.balance, 11 ether);
     }
 
@@ -111,12 +128,12 @@ contract DuelTest is Test {
         vm.prank(alice);
         uint256 id = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
-        vm.expectRevert(Duel.WrongStake.selector);
+        vm.expectRevert(IDuel.WrongStake.selector);
         duel.join{value: 0.5 ether}(id, deck);
         vm.prank(bob);
         duel.join{value: 1 ether}(id, deck);
         vm.prank(makeAddr("eve"));
-        vm.expectRevert(Duel.NotPlayer.selector);
+        vm.expectRevert(IDuel.NotPlayer.selector);
         duel.commit(id, bytes32(uint256(1)));
     }
 
@@ -124,13 +141,14 @@ contract DuelTest is Test {
         vm.prank(alice);
         uint256 id = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
-        vm.expectRevert(Duel.NotPlayer.selector);
+        vm.expectRevert(IDuel.NotPlayer.selector);
         duel.cancel(id);
         vm.prank(alice);
         duel.cancel(id);
+        _cash();
         assertEq(alice.balance, 10 ether);
         vm.prank(bob);
-        vm.expectRevert(Duel.WrongState.selector);
+        vm.expectRevert(IDuel.WrongState.selector);
         duel.join{value: 1 ether}(id, deck);
     }
 
@@ -155,13 +173,13 @@ contract DuelTest is Test {
         _commit(alice, id, 9, "sa");
         _commit(bob, id, 1, "sb");
         vm.prank(alice);
-        vm.expectRevert(Duel.BadCard.selector);
+        vm.expectRevert(IDuel.BadCard.selector);
         duel.reveal(id, 9, "sa");
     }
 
     function test_onlyOwnerOrUpdaterSetsStats() public {
         vm.prank(bob);
-        vm.expectRevert(CardStats.NotAllowed.selector);
+        vm.expectRevert(ICardStats.NotAllowed.selector);
         cards.setCard(0, "x", [uint8(1), 1, 1, 1, 1, 1]);
         cards.setUpdater(bob);
         vm.prank(bob);
@@ -183,28 +201,30 @@ contract DuelTest is Test {
     function test_liveDuelJudgeDecides() public {
         (uint256 id, address judge) = _live();
         vm.prank(alice);
-        vm.expectRevert(Duel.NotJudge.selector);
+        vm.expectRevert(IDuel.NotJudge.selector);
         duel.settleLive(id, 1, "x");
         vm.prank(judge);
-        vm.expectRevert(Duel.BadOutcome.selector);
+        vm.expectRevert(IDuel.BadOutcome.selector);
         duel.settleLive(id, 3, "x");
         vm.prank(judge);
         duel.settleLive(id, 2, keccak256("prompt|answerA|answerB|b"));
+        _cash();
         assertEq(bob.balance, 11 ether);
         assertEq(address(duel).balance, 0);
     }
 
     function test_liveDuelFallsBackToStats() public {
         (uint256 id,) = _live();
-        vm.expectRevert(Duel.TooEarly.selector);
+        vm.expectRevert(IDuel.TooEarly.selector);
         duel.settleLiveByStats(id);
         // no timeout claim while waiting for the judge
         vm.warp(block.timestamp + 61);
-        vm.expectRevert(Duel.WrongState.selector);
+        vm.expectRevert(IDuel.WrongState.selector);
         duel.claimTimeout(id);
         vm.warp(block.timestamp + 10 minutes);
         duel.settleLiveByStats(id);
         // equal stats in round 3: draw, both refunded
+        _cash();
         assertEq(alice.balance, 10 ether);
         assertEq(bob.balance, 10 ether);
     }
@@ -212,23 +232,23 @@ contract DuelTest is Test {
     function test_noCommitsWhileWaitingForVerdict() public {
         (uint256 id,) = _live();
         vm.prank(alice);
-        vm.expectRevert(Duel.WrongState.selector);
+        vm.expectRevert(IDuel.WrongState.selector);
         duel.commit(id, bytes32(uint256(1)));
     }
 
     function test_deckRules() public {
         // duplicate card
         vm.prank(alice);
-        vm.expectRevert(Duel.BadDeck.selector);
+        vm.expectRevert(IDuel.BadDeck.selector);
         duel.create{value: 1 ether}([uint16(0), 0, 1, 2, 3]);
         // card that does not exist
         vm.prank(alice);
-        vm.expectRevert(Duel.BadCard.selector);
+        vm.expectRevert(IDuel.BadCard.selector);
         duel.create{value: 1 ether}([uint16(0), 1, 2, 3, 7]);
         // over the power cap
         duel.setDeckCap(1000);
         vm.prank(alice);
-        vm.expectRevert(Duel.BadDeck.selector);
+        vm.expectRevert(IDuel.BadDeck.selector);
         duel.create{value: 1 ether}(deck);
     }
 
@@ -241,7 +261,7 @@ contract DuelTest is Test {
         _commit(alice, id, 5, "sa");
         _commit(bob, id, 1, "sb");
         vm.prank(alice);
-        vm.expectRevert(Duel.NotInDeck.selector);
+        vm.expectRevert(IDuel.NotInDeck.selector);
         duel.reveal(id, 5, "sa");
     }
 
@@ -253,5 +273,56 @@ contract DuelTest is Test {
         assertEq(duel.typeOf(r), 0);
         assertEq(duel.typeOf(sp), 1);
         assertEq(duel.typeOf(c), 2);
+    }
+
+    function test_withdrawOnlyWhatIsOwed() public {
+        vm.prank(alice);
+        vm.expectRevert(IDuel.NothingOwed.selector);
+        duel.withdraw();
+        uint256 id = _start();
+        _play(id, 0, 1);
+        _play(id, 2, 4);
+        assertEq(duel.owed(alice), 2 ether);
+        assertEq(address(duel).balance, 2 ether);
+        vm.prank(alice);
+        duel.withdraw();
+        assertEq(duel.owed(alice), 0);
+        vm.prank(alice);
+        vm.expectRevert(IDuel.NothingOwed.selector);
+        duel.withdraw();
+    }
+
+    function test_aPlayerThatRejectsMoneyCannotBlockTheMatch() public {
+        Rejecter r = new Rejecter(duel);
+        vm.deal(address(r), 5 ether);
+        uint256 id = r.create{value: 1 ether}(deck);
+        vm.prank(bob);
+        duel.join{value: 1 ether}(id, deck);
+        // bob stalls nothing: the rejecter commits, bob never does, rejecter wins by timeout
+        r.commit(id, keccak256(abi.encode(id, uint8(0), address(r), uint16(0), bytes32("s"))));
+        vm.warp(block.timestamp + 61);
+        duel.claimTimeout(id);
+        assertEq(uint8(duel.getMatch(id).state), uint8(IDuel.State.Done));
+        assertEq(duel.owed(address(r)), 2 ether);
+    }
+}
+
+contract Rejecter {
+    Duel duel;
+
+    constructor(Duel d) {
+        duel = d;
+    }
+
+    function create(uint16[5] calldata deck) external payable returns (uint256) {
+        return duel.create{value: msg.value}(deck);
+    }
+
+    function commit(uint256 id, bytes32 c) external {
+        duel.commit(id, c);
+    }
+
+    receive() external payable {
+        revert("no");
     }
 }
