@@ -33,3 +33,16 @@ SeasonBank is for mainnet (aurora deposits) and is not deployed yet.
 match 0: b won 2 to 0, withdrew the pot, backers and market shares paid, all three contracts empty. the earlier set above is retired.
 
 layout: `src/interfaces/` holds every event, error, struct and external function; contracts implement them and talk to each other only through the interfaces. owner checks use solady `Ownable`. duel payouts are credited to `owed` and pulled with `withdraw()`.
+
+### chainlink cre, proven on testnet (sept 28 2026)
+
+StatsFeed redeployed with the workflow check: `0xb54D1290b0c8DF07ab0473eFeb64E3cd344BB50a` (CardStats updater points to it; the older feed `0x2884...` had no check and is retired).
+
+`cre workflow simulate stats-feed --broadcast` (cli 1.35.0) sends a real tx from our key to chainlink's MockKeystoneForwarder `0xB9F79d863261869B234c481D1f9A7af84AeAd192`, which calls `onReport` on the feed:
+
+| run | expected workflow | tx | result |
+|---|---|---|---|
+| 1 | owner = our deployer (wrong on purpose) | `0x5078ad9dfaac185e24db005e8003f861c757370f91bb052cf074c4f066a5c910` | forwarder logged success 0, feed rejected, card 4 unchanged |
+| 2 | owner `0xaaaa..aaaa`, id `0x1111..1111` | `0x4f1c2938417bb96835385fbf949094050d0ceb21ab5fbf626c289c6d5cb1c45c` | accepted, card 4 `[72,73,64,86,90,58]` -> `[73,74,65,87,90,58]` |
+
+note: the simulator fills metadata with placeholders (workflow id `0x11..11`, owner `0xaa..aa`, read from the raw report in the forwarder tx). a workflow deployed to a don carries the real owner, so `setWorkflow` has to be set to the real owner and id at that point.
