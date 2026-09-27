@@ -15,7 +15,7 @@ import {ICardStats} from "./interfaces/ICardStats.sol";
 contract Duel is IDuel, Ownable {
     uint8 public constant ROUNDS = 3;
     uint8 public constant LIVE_ROUND = 2;
-    uint256 public constant MOVE_TIMEOUT = 60;
+    uint256 public constant MOVE_TIMEOUT = 120;
     uint256 public constant VERDICT_TIMEOUT = 10 minutes;
     uint8 public constant DECK_SIZE = 5;
 
@@ -118,12 +118,22 @@ contract Duel is IDuel, Ownable {
     }
 
     function reveal(uint256 id, uint16 card, bytes32 salt) external {
+        _reveal(id, msg.sender, card, salt);
+    }
+
+    // anyone holding the card and salt can reveal for a player: the commit binds the player address, so only the
+    // real pick can pass. this lets a relayer reveal while the player's tab is closed or in the background.
+    function revealFor(uint256 id, address player, uint16 card, bytes32 salt) external {
+        _reveal(id, player, card, salt);
+    }
+
+    function _reveal(uint256 id, address player, uint16 card, bytes32 salt) internal {
         Match storage m = matches[id];
         if (m.state != State.Playing) revert WrongState();
         if (m.commitA == 0 || m.commitB == 0) revert NotCommitted();
-        bytes32 c = keccak256(abi.encode(id, m.round, msg.sender, card, salt));
-        bool isA = msg.sender == m.a;
-        if (!isA && msg.sender != m.b) revert NotPlayer();
+        bytes32 c = keccak256(abi.encode(id, m.round, player, card, salt));
+        bool isA = player == m.a;
+        if (!isA && player != m.b) revert NotPlayer();
         if (isA ? (m.revealedA || c != m.commitA) : (m.revealedB || c != m.commitB)) revert BadReveal();
         // a card that does not exist would make the round unsettleable and hand the other side a timeout win
         if (card > 255 || !cards.exists(card, m.statsVersion)) revert BadCard();
@@ -141,7 +151,7 @@ contract Duel is IDuel, Ownable {
             m.cardB = card;
         }
         m.seed = keccak256(abi.encode(m.seed, salt));
-        emit Revealed(id, msg.sender, m.round, card);
+        emit Revealed(id, player, m.round, card);
         if (m.revealedA && m.revealedB) _settleRound(id, m);
     }
 

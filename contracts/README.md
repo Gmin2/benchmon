@@ -46,3 +46,15 @@ StatsFeed redeployed with the workflow check: `0xb54D1290b0c8DF07ab0473eFeb64E3c
 | 2 | owner `0xaaaa..aaaa`, id `0x1111..1111` | `0x4f1c2938417bb96835385fbf949094050d0ceb21ab5fbf626c289c6d5cb1c45c` | accepted, card 4 `[72,73,64,86,90,58]` -> `[73,74,65,87,90,58]` |
 
 note: the simulator fills metadata with placeholders (workflow id `0x11..11`, owner `0xaa..aa`, read from the raw report in the forwarder tx). a workflow deployed to a don carries the real owner, so `setWorkflow` has to be set to the real owner and id at that point.
+
+### current set (sept 28 2026, permissionless revealFor, 120s move timeout)
+
+| contract | address |
+|---|---|
+| CardStats | `0xD27730D0482746B1e0BD702429C2A9AB98d141Fb` |
+| Duel | `0x1B9E807c7e738779998e943879132CA03B603ccb` |
+| Backing | `0x6807C5681B77A28CF1E177f6C4518A9730771238` |
+| MatchMarket | `0xC3cd445e804FEC26d873D736eA284F33dB275dC8` |
+| StatsFeed | `0xB1A2Dc3fC1f20CA0e56Cc016fcc863133196D3d7` (workflow check set to the simulator's placeholder owner and id) |
+
+match 1, played from the web app by two dynamic test users: player a committed and left the tab in the background, player b committed at block 66262014, the backend relay revealed a at 66262017 (`0x113228b6...`) and b at 66262021, round won by a. the earlier sets above are retired.

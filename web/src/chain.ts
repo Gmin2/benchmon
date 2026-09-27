@@ -8,8 +8,8 @@ export const pub = createPublicClient({ transport: http(RPC, { batch: { wait: 30
 
 // current testnet set, see contracts/README.md
 export const CONTRACTS = {
-  cards: "0xDa6f2436E78d4CD7490Df5F0D593055CfAa62345" as Address,
-  duel: "0x2d212A3898139EdEE5b27A2FCA8063edf9d51805" as Address,
+  cards: "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb" as Address,
+  duel: "0x1B9E807c7e738779998e943879132CA03B603ccb" as Address,
 };
 
 // monad charges the gas limit, not gas used, so limits sit just above what the tests measured
@@ -57,4 +57,17 @@ export function savePick(id: bigint, round: number, player: Address, card: numbe
 export function loadPick(id: bigint, round: number, player: Address): { card: number; salt: Hex } | null {
   const v = localStorage.getItem(key(id, round, player));
   return v ? JSON.parse(v) : null;
+}
+
+export const BACKEND = "http://localhost:8788";
+
+// hand the pick to the backend so it can reveal even if this tab is closed or in the background
+export async function sendPick(id: bigint, round: number, player: Address, card: number, salt: Hex) {
+  const res = await fetch(`${BACKEND}/pick`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: id.toString(), round, player, card, salt }),
+  });
+  const j = (await res.json()) as { ok: boolean; error?: string };
+  if (!j.ok) throw new Error(`relay: ${j.error}`);
 }

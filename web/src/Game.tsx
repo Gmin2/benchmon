@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatEther, keccak256, parseEther, toHex, type Address } from "viem";
 import { duelAbi } from "./abi";
-import { CONTRACTS, GAS, commitHash, loadCards, loadPick, readMatch, recentMatches, savePick, type Card, type Match } from "./chain";
+import { CONTRACTS, GAS, commitHash, loadCards, loadPick, readMatch, recentMatches, savePick, sendPick, type Card, type Match } from "./chain";
 import { ARENAS } from "./rules";
 import { useWallet } from "./useWallet";
 
@@ -164,6 +164,7 @@ function MatchView({ id, cards, back }: { id: bigint; cards: Card[]; back: () =>
   // poll the match; when my commit is in and the other side has committed, reveal on my own
   useEffect(() => {
     let alive = true;
+    let tryingRound = -1;
     const tick = async () => {
       try {
         const next = await readMatch(id);
@@ -182,6 +183,7 @@ function MatchView({ id, cards, back }: { id: bigint; cards: Card[]; back: () =>
         const pick = loadPick(id, next.round, address);
         if (bothIn && myCommit !== zero && !myReveal && pick) {
           working.current = true;
+          tryingRound = next.round;
           setStatus("revealing your card");
           await write({ address: CONTRACTS.duel, abi: duelAbi, functionName: "reveal", args: [id, pick.card, pick.salt], gas: GAS.reveal });
           setStatus("");
@@ -189,7 +191,12 @@ function MatchView({ id, cards, back }: { id: bigint; cards: Card[]; back: () =>
         }
       } catch (e) {
         working.current = false;
-        setErr((e as Error).message);
+        setStatus("");
+        // the backend may have revealed for us a moment earlier, or the round already settled: both are fine
+        const after = await readMatch(id).catch(() => null);
+        const amA = after && address && after.a.toLowerCase() === address.toLowerCase();
+        const handled = after && (after.round > tryingRound || after.state !== 1 || (amA ? after.revealedA : after.revealedB));
+        if (!handled) setErr((e as Error).message.split("\n")[0]!);
       }
     };
     tick();
@@ -222,6 +229,8 @@ function MatchView({ id, cards, back }: { id: bigint; cards: Card[]; back: () =>
       setStatus("locking in your pick");
       await write({ address: CONTRACTS.duel, abi: duelAbi, functionName: "commit", args: [id, commitHash(id, m.round, address as Address, card, salt)], gas: GAS.commit });
       setStatus("");
+      // the backend reveals for us once both picks are in; our own reveal below stays as a backup
+      sendPick(id, m.round, address as Address, card, salt).catch((e: Error) => console.log(`bm: ${e.message}`));
     } catch (e) {
       setErr((e as Error).message);
       setStatus("");

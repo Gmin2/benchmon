@@ -159,7 +159,7 @@ contract DuelFuzzTest is Test {
         try duel.reveal(id, fakeCard, "a") {} catch {}
         vm.prank(bob);
         try duel.reveal(id, 1, "b") {} catch {}
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 121);
         if (duel.getMatch(id).state == IDuel.State.Playing) duel.claimTimeout(id);
         assertLe(duel.owed(alice), 1 ether, "a fake card won money");
     }
@@ -233,6 +233,15 @@ contract Handler is Test {
         address p = _actor(who);
         vm.prank(p);
         try duel.reveal(id, lastCard[id][p], lastSalt[id][p]) {} catch {}
+    }
+
+    // a relayer reveals with whatever it holds, right or wrong
+    function revealFor(uint256 who, uint256 pick, bool wrongSalt) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        address p = _actor(who);
+        bytes32 salt = wrongSalt ? keccak256(abi.encode(lastSalt[id][p])) : lastSalt[id][p];
+        try duel.revealFor(id, p, lastCard[id][p], salt) {} catch {}
     }
 
     // both players of a live match commit and reveal in one go, with cards that may be fake or reused
@@ -354,7 +363,7 @@ contract DuelInvariantTest is Test {
         handler = new Handler(duel);
         duel.setJudge(address(handler));
         targetContract(address(handler));
-        bytes4[] memory sel = new bytes4[](11);
+        bytes4[] memory sel = new bytes4[](12);
         sel[0] = Handler.create.selector;
         sel[1] = Handler.join.selector;
         sel[2] = Handler.commit.selector;
@@ -366,6 +375,7 @@ contract DuelInvariantTest is Test {
         sel[8] = Handler.verdictByStats.selector;
         sel[9] = Handler.playToLive.selector;
         sel[10] = Handler.withdraw.selector;
+        sel[11] = Handler.revealFor.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 

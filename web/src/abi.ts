@@ -884,6 +884,34 @@ export const duelAbi = [
   },
   {
     "type": "function",
+    "name": "revealFor",
+    "inputs": [
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "player",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "card",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setDeckCap",
     "inputs": [
       {

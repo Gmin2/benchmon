@@ -77,6 +77,7 @@ interface IDuel {
     function cancel(uint256 id) external;
     function commit(uint256 id, bytes32 c) external;
     function reveal(uint256 id, uint16 card, bytes32 salt) external;
+    function revealFor(uint256 id, address player, uint16 card, bytes32 salt) external;
     function claimTimeout(uint256 id) external;
     function settleLive(uint256 id, uint8 outcome, bytes32 duelHash) external;
     function settleLiveByStats(uint256 id) external;

@@ -18,9 +18,9 @@ export const config = {
   judgeModel: process.env.JUDGE_MODEL ?? "kimi-k3",
   duelsDir: process.env.DUELS_DIR ?? new URL("../../tmp/duels/", import.meta.url).pathname,
   contracts: {
-    cards: (process.env.CARDS ?? "0xDa6f2436E78d4CD7490Df5F0D593055CfAa62345") as Address,
-    duel: (process.env.DUEL ?? "0x2d212A3898139EdEE5b27A2FCA8063edf9d51805") as Address,
-    backing: (process.env.BACKING ?? "0x6b90b0793b2c31b294999Fad2Ec02E36d52Dc655") as Address,
-    market: (process.env.MARKET ?? "0x061f75cfAcC6ecF54D9B7cfAAb4d353a9d6C7443") as Address,
+    cards: (process.env.CARDS ?? "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb") as Address,
+    duel: (process.env.DUEL ?? "0x1B9E807c7e738779998e943879132CA03B603ccb") as Address,
+    backing: (process.env.BACKING ?? "0x6807C5681B77A28CF1E177f6C4518A9730771238") as Address,
+    market: (process.env.MARKET ?? "0xC3cd445e804FEC26d873D736eA284F33dB275dC8") as Address,
   },
 };

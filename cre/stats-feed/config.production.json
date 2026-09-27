@@ -1,7 +1,7 @@
 {
   "schedule": "0 */6 * * *",
   "chain": "monad-testnet",
-  "feed": "0xb54D1290b0c8DF07ab0473eFeb64E3cd344BB50a",
+  "feed": "0xB1A2Dc3fC1f20CA0e56Cc016fcc863133196D3d7",
   "gasLimit": "400000",
   "cards": [{ "id": 4, "stats": [73, 74, 65, 87, 90, 58] }]
 }

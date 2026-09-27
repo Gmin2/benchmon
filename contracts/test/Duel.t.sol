@@ -105,7 +105,7 @@ contract DuelTest is Test {
         _commit(alice, id, 0, "sa");
         vm.expectRevert(IDuel.TooEarly.selector);
         duel.claimTimeout(id);
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 121);
         duel.claimTimeout(id);
         _cash();
         assertEq(alice.balance, 11 ether);
@@ -118,7 +118,7 @@ contract DuelTest is Test {
         _commit(bob, id, 1, "sb");
         vm.prank(bob);
         duel.reveal(id, 1, "sb");
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 121);
         duel.claimTimeout(id);
         _cash();
         assertEq(bob.balance, 11 ether);
@@ -218,7 +218,7 @@ contract DuelTest is Test {
         vm.expectRevert(IDuel.TooEarly.selector);
         duel.settleLiveByStats(id);
         // no timeout claim while waiting for the judge
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 121);
         vm.expectRevert(IDuel.WrongState.selector);
         duel.claimTimeout(id);
         vm.warp(block.timestamp + 10 minutes);
@@ -300,10 +300,42 @@ contract DuelTest is Test {
         duel.join{value: 1 ether}(id, deck);
         // bob stalls nothing: the rejecter commits, bob never does, rejecter wins by timeout
         r.commit(id, keccak256(abi.encode(id, uint8(0), address(r), uint16(0), bytes32("s"))));
-        vm.warp(block.timestamp + 61);
+        vm.warp(block.timestamp + 121);
         duel.claimTimeout(id);
         assertEq(uint8(duel.getMatch(id).state), uint8(IDuel.State.Done));
         assertEq(duel.owed(address(r)), 2 ether);
+    }
+
+    function test_anyoneCanRevealForAPlayer() public {
+        uint256 id = _start();
+        _commit(alice, id, 0, "sa");
+        _commit(bob, id, 1, "sb");
+        address relayer = makeAddr("relayer");
+        vm.prank(relayer);
+        duel.revealFor(id, alice, 0, "sa");
+        vm.prank(relayer);
+        duel.revealFor(id, bob, 1, "sb");
+        assertEq(duel.getMatch(id).winsA, 1);
+    }
+
+    function test_revealForNeedsTheRealPick() public {
+        uint256 id = _start();
+        _commit(alice, id, 0, "sa");
+        address relayer = makeAddr("relayer");
+        // before both commits nobody can reveal, so a relayer cannot leak a pick into the chain early
+        vm.prank(relayer);
+        vm.expectRevert(IDuel.NotCommitted.selector);
+        duel.revealFor(id, alice, 0, "sa");
+        _commit(bob, id, 1, "sb");
+        vm.prank(relayer);
+        vm.expectRevert(IDuel.BadReveal.selector);
+        duel.revealFor(id, alice, 1, "sa");
+        vm.prank(relayer);
+        vm.expectRevert(IDuel.BadReveal.selector);
+        duel.revealFor(id, bob, 0, "sa");
+        vm.prank(relayer);
+        vm.expectRevert(IDuel.NotPlayer.selector);
+        duel.revealFor(id, relayer, 0, "sa");
     }
 }
 
