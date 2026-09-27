@@ -35,6 +35,7 @@ contract Duel {
         bytes32 seed;
         uint256 usedA;
         uint256 usedB;
+        uint64 statsVersion;
     }
 
     CardStats public immutable cards;
@@ -84,6 +85,7 @@ contract Duel {
         m.b = msg.sender;
         m.state = State.Playing;
         m.seed = keccak256(abi.encode(id, m.a, msg.sender, block.prevrandao));
+        m.statsVersion = cards.version();
         m.arena = uint8(uint256(m.seed) % 6);
         m.deadline = uint64(block.timestamp + MOVE_TIMEOUT);
         emit Joined(id, msg.sender, m.arena);
@@ -125,8 +127,7 @@ contract Duel {
         if (!isA && msg.sender != m.b) revert NotPlayer();
         if (isA ? (m.revealedA || c != m.commitA) : (m.revealedB || c != m.commitB)) revert BadReveal();
         // a card that does not exist would make the round unsettleable and hand the other side a timeout win
-        if (card > 255 || card >= cards.cardCount()) revert BadCard();
-        cards.statsOf(card);
+        if (card > 255 || !cards.exists(card, m.statsVersion)) revert BadCard();
         uint256 bit = 1 << card;
         if (isA) {
             if (m.usedA & bit != 0) revert CardUsed();
@@ -158,8 +159,8 @@ contract Duel {
     }
 
     function _settleRound(uint256 id, Match storage m) internal {
-        uint8 sa = cards.statsOf(m.cardA)[m.arena];
-        uint8 sb = cards.statsOf(m.cardB)[m.arena];
+        uint8 sa = cards.statsAt(m.cardA, m.statsVersion)[m.arena];
+        uint8 sb = cards.statsAt(m.cardB, m.statsVersion)[m.arena];
         address roundWinner;
         if (sa > sb) {
             m.winsA++;

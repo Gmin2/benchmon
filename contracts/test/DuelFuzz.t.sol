@@ -5,6 +5,40 @@ import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
 
+contract CardStatsFuzzTest is Test {
+    function testFuzz_statsAtMatchesNaiveScan(uint8[20] memory writes, uint64 probe) public {
+        CardStats c = new CardStats();
+        uint64[] memory versions = new uint64[](20);
+        uint8[] memory vals = new uint8[](20);
+        uint256 n;
+        for (uint256 i; i < 20; i++) {
+            uint256 id = writes[i] % 3;
+            uint8 v = uint8(bound(writes[i], 1, 99));
+            c.setCard(id, "", [v, v, v, v, v, v]);
+            if (id == 0) {
+                versions[n] = c.version();
+                vals[n] = v;
+                n++;
+            }
+        }
+        probe = uint64(bound(probe, 0, c.version()));
+        uint8 want;
+        bool found;
+        for (uint256 i; i < n; i++) {
+            if (versions[i] <= probe) {
+                want = vals[i];
+                found = true;
+            }
+        }
+        if (!found) {
+            vm.expectRevert(CardStats.NoCard.selector);
+            c.statsAt(0, probe);
+        } else {
+            assertEq(c.statsAt(0, probe)[0], want);
+        }
+    }
+}
+
 contract DuelFuzzTest is Test {
     CardStats cards;
     Duel duel;

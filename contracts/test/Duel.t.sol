@@ -132,4 +132,39 @@ contract DuelTest is Test {
         vm.expectRevert(Duel.WrongState.selector);
         duel.join{value: 1 ether}(id);
     }
+
+    function test_statsAreFrozenAtJoin() public {
+        uint256 id = _start();
+        // after the match starts, the weak card becomes the strongest; the match must still use the old stats
+        cards.setCard(1, "", [uint8(99), 99, 99, 99, 99, 99]);
+        _play(id, 0, 1);
+        assertEq(duel.getMatch(id).winsA, 1);
+        // a new match sees the update
+        vm.prank(alice);
+        uint256 id2 = duel.create{value: 1 ether}();
+        vm.prank(bob);
+        duel.join{value: 1 ether}(id2);
+        _play(id2, 0, 1);
+        assertEq(duel.getMatch(id2).winsB, 1);
+    }
+
+    function test_cardAddedAfterJoinIsNotPlayable() public {
+        uint256 id = _start();
+        cards.setCard(9, "new", [uint8(99), 99, 99, 99, 99, 99]);
+        _commit(alice, id, 9, "sa");
+        _commit(bob, id, 1, "sb");
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadCard.selector);
+        duel.reveal(id, 9, "sa");
+    }
+
+    function test_onlyOwnerOrUpdaterSetsStats() public {
+        vm.prank(bob);
+        vm.expectRevert(CardStats.NotAllowed.selector);
+        cards.setCard(0, "x", [uint8(1), 1, 1, 1, 1, 1]);
+        cards.setUpdater(bob);
+        vm.prank(bob);
+        cards.setCard(0, "x", [uint8(1), 1, 1, 1, 1, 1]);
+        assertEq(cards.statsOf(0)[0], 1);
+    }
 }
