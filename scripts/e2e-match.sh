@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../contracts"
 export PATH="$PATH:$HOME/.foundry/bin"
 
+FROM=$(cast block-number --rpc-url "$RPC_URL")
 A=$(cast wallet address "$KEY_A")
 B=$(cast wallet address "$KEY_B")
 send() { cast send --rpc-url "$RPC_URL" --private-key "$1" "${@:2}" --json | jq -r '.data.status // .status // "sent"'; }
@@ -40,6 +41,7 @@ play 0 3
 play 1 2
 play 2 1 || true
 
-cast logs --rpc-url "$RPC_URL" --address "$DUEL" --from-block earliest 'RoundWon(uint256 indexed,uint8,address,uint8)' --json | jq -r '.[] | .data' | while read d; do cast abi-decode --input 'f(uint8,address,uint8)' "$d" | tr '\n' ' '; echo; done
-cast logs --rpc-url "$RPC_URL" --address "$DUEL" --from-block earliest 'Finished(uint256 indexed,address,uint256)' --json | jq -r '.[] | .data' | xargs -I{} cast abi-decode --input 'f(address,uint256)' {}
+M=$(cast call --rpc-url "$RPC_URL" "$DUEL" "getMatch(uint256)((address,address,uint256,uint8,uint8,uint8,uint8,uint8,uint64,bytes32,bytes32,bool,bool,uint16,uint16,bytes32,uint256,uint256))" "$ID" | tr -d '()')
+echo "$M" | awk -F', ' '{print "state", $4, "(2 = done), rounds", $5, ", wins a", $6, ", wins b", $7}'
+echo "duel balance after: $(cast balance --ether --rpc-url "$RPC_URL" "$DUEL")"
 echo "a $A  b $B"
