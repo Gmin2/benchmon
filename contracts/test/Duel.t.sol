@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Test} from "forge-std/Test.sol";
+import {CardStats} from "../src/CardStats.sol";
+import {Duel} from "../src/Duel.sol";
+
+contract DuelTest is Test {
+    CardStats cards;
+    Duel duel;
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+
+    function setUp() public {
+        cards = new CardStats();
+        // card 0 wins every stat, card 1 loses every stat, card 2 sits in the middle
+        cards.setCard(0, "strong", [uint8(90), 90, 90, 90, 90, 90]);
+        cards.setCard(1, "weak", [uint8(10), 10, 10, 10, 10, 10]);
+        cards.setCard(2, "mid", [uint8(50), 50, 50, 50, 50, 50]);
+        cards.setCard(3, "mid2", [uint8(50), 50, 50, 50, 50, 50]);
+        cards.setCard(4, "weak2", [uint8(10), 10, 10, 10, 10, 10]);
+        duel = new Duel(cards);
+        vm.deal(alice, 10 ether);
+        vm.deal(bob, 10 ether);
+    }
+
+    function _commit(address p, uint256 id, uint16 card, bytes32 salt) internal {
+        uint8 round = duel.getMatch(id).round;
+        vm.prank(p);
+        duel.commit(id, keccak256(abi.encode(id, round, p, card, salt)));
+    }
+
+    function _play(uint256 id, uint16 ca, uint16 cb) internal {
+        _commit(alice, id, ca, "sa");
+        _commit(bob, id, cb, "sb");
+        vm.prank(alice);
+        duel.reveal(id, ca, "sa");
+        vm.prank(bob);
+        duel.reveal(id, cb, "sb");
+    }
+
+    function _start() internal returns (uint256 id) {
+        vm.prank(alice);
+        id = duel.create{value: 1 ether}();
+        vm.prank(bob);
+        duel.join{value: 1 ether}(id);
+    }
+
+    function test_winnerTakesPot() public {
+        uint256 id = _start();
+        _play(id, 0, 1);
+        _play(id, 2, 3); // draw round
+        _play(id, 1, 0);
+        // 1 win each after three rounds: draw, both refunded
+        assertEq(alice.balance, 10 ether);
+        assertEq(bob.balance, 10 ether);
+    }
+
+    function test_twoWinsEndsEarly() public {
+        uint256 id = _start();
+        _play(id, 0, 1);
+        _play(id, 2, 4);
+        assertEq(alice.balance, 11 ether);
+        assertEq(bob.balance, 9 ether);
+        assertEq(uint8(duel.getMatch(id).state), uint8(Duel.State.Done));
+    }
+
+    function test_badRevealReverts() public {
+        uint256 id = _start();
+        _commit(alice, id, 0, "sa");
+        _commit(bob, id, 1, "sb");
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadReveal.selector);
+        duel.reveal(id, 1, "sa");
+    }
+
+    function test_cardCannotBeReused() public {
+        uint256 id = _start();
+        _play(id, 2, 3);
+        _commit(alice, id, 2, "x");
+        _commit(bob, id, 1, "y");
+        vm.prank(alice);
+        vm.expectRevert(Duel.CardUsed.selector);
+        duel.reveal(id, 2, "x");
+    }
+
+    function test_timeoutPaysThePlayerWhoMoved() public {
+        uint256 id = _start();
+        _commit(alice, id, 0, "sa");
+        vm.expectRevert(Duel.TooEarly.selector);
+        duel.claimTimeout(id);
+        vm.warp(block.timestamp + 61);
+        duel.claimTimeout(id);
+        assertEq(alice.balance, 11 ether);
+        assertEq(bob.balance, 9 ether);
+    }
+
+    function test_revealTimeout() public {
+        uint256 id = _start();
+        _commit(alice, id, 0, "sa");
+        _commit(bob, id, 1, "sb");
+        vm.prank(bob);
+        duel.reveal(id, 1, "sb");
+        vm.warp(block.timestamp + 61);
+        duel.claimTimeout(id);
+        assertEq(bob.balance, 11 ether);
+    }
+
+    function test_wrongStakeAndStranger() public {
+        vm.prank(alice);
+        uint256 id = duel.create{value: 1 ether}();
+        vm.prank(bob);
+        vm.expectRevert(Duel.WrongStake.selector);
+        duel.join{value: 0.5 ether}(id);
+        vm.prank(bob);
+        duel.join{value: 1 ether}(id);
+        vm.prank(makeAddr("eve"));
+        vm.expectRevert(Duel.NotPlayer.selector);
+        duel.commit(id, bytes32(uint256(1)));
+    }
+}
