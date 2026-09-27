@@ -11,7 +11,7 @@ B=$(cast wallet address "$KEY_B")
 send() { cast send --rpc-url "$RPC_URL" --private-key "$1" "${@:2}" --json | jq -r '.data.status // .status // "sent"'; }
 
 CARDS=$(forge create src/CardStats.sol:CardStats --rpc-url "$RPC_URL" --private-key "$KEY_A" --broadcast | awk '/Deployed to/ {print $3}')
-DUEL=$(forge create src/Duel.sol:Duel --rpc-url "$RPC_URL" --private-key "$KEY_A" --broadcast --constructor-args "$CARDS" | awk '/Deployed to/ {print $3}')
+DUEL=$(forge create src/Duel.sol:Duel --rpc-url "$RPC_URL" --private-key "$KEY_A" --broadcast --constructor-args "$CARDS" "${JUDGE:-0x0000000000000000000000000000000000000000}" | awk '/Deployed to/ {print $3}')
 echo "cards $CARDS"
 echo "duel  $DUEL"
 

@@ -48,7 +48,7 @@ contract DuelFuzzTest is Test {
 
     function setUp() public {
         cards = new CardStats();
-        duel = new Duel(cards);
+        duel = new Duel(cards, address(0));
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
     }
@@ -229,6 +229,40 @@ contract Handler is Test {
     uint256 public roundsPlayed;
     uint256 public finished;
 
+    function verdict(uint256 pick, uint8 outcome, bytes32 h) external {
+        if (ids.length == 0) return;
+        try duel.settleLive(ids[pick % ids.length], outcome % 4, h) {} catch {}
+    }
+
+    function verdictByStats(uint256 pick, uint16 secs) external {
+        if (ids.length == 0) return;
+        vm.warp(block.timestamp + secs);
+        try duel.settleLiveByStats(ids[pick % ids.length]) {} catch {}
+    }
+
+    // plays fresh valid cards round after round until the match waits for a verdict or ends
+    function playToLive(uint256 pick, uint256 seed) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        for (uint16 r; r < 3; r++) {
+            Duel.Match memory m = duel.getMatch(id);
+            if (m.state != Duel.State.Playing || m.awaitingVerdict || m.commitA != 0 || m.commitB != 0) return;
+            uint16 ca = uint16((seed + r) % 8);
+            uint16 cb = uint16((seed / 8 + r * 3) % 8);
+            if (m.usedA & (1 << ca) != 0 || m.usedB & (1 << cb) != 0) return;
+            bytes32 sa = keccak256(abi.encode(seed, r, 1));
+            bytes32 sb = keccak256(abi.encode(seed, r, 2));
+            vm.prank(m.a);
+            duel.commit(id, keccak256(abi.encode(id, m.round, m.a, ca, sa)));
+            vm.prank(m.b);
+            duel.commit(id, keccak256(abi.encode(id, m.round, m.b, cb, sb)));
+            vm.prank(m.a);
+            duel.reveal(id, ca, sa);
+            vm.prank(m.b);
+            duel.reveal(id, cb, sb);
+        }
+    }
+
     function cancel(uint256 who, uint256 pick) external {
         if (ids.length == 0) return;
         vm.prank(_actor(who));
@@ -270,10 +304,11 @@ contract DuelInvariantTest is Test {
                 i, "c", [uint8(10 + i * 10), uint8(90 - i * 10), 50, uint8(20 + i * 5), 60, uint8(30 + i * 7)]
             );
         }
-        duel = new Duel(cards);
+        duel = new Duel(cards, address(this));
         handler = new Handler(duel);
+        duel.setJudge(address(handler));
         targetContract(address(handler));
-        bytes4[] memory sel = new bytes4[](7);
+        bytes4[] memory sel = new bytes4[](10);
         sel[0] = Handler.create.selector;
         sel[1] = Handler.join.selector;
         sel[2] = Handler.commit.selector;
@@ -281,6 +316,9 @@ contract DuelInvariantTest is Test {
         sel[4] = Handler.playRound.selector;
         sel[5] = Handler.cancel.selector;
         sel[6] = Handler.timeout.selector;
+        sel[7] = Handler.verdict.selector;
+        sel[8] = Handler.verdictByStats.selector;
+        sel[9] = Handler.playToLive.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 

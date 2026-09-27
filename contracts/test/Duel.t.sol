@@ -19,7 +19,7 @@ contract DuelTest is Test {
         cards.setCard(2, "mid", [uint8(50), 50, 50, 50, 50, 50]);
         cards.setCard(3, "mid2", [uint8(50), 50, 50, 50, 50, 50]);
         cards.setCard(4, "weak2", [uint8(10), 10, 10, 10, 10, 10]);
-        duel = new Duel(cards);
+        duel = new Duel(cards, address(0));
         vm.deal(alice, 10 ether);
         vm.deal(bob, 10 ether);
     }
@@ -166,5 +166,52 @@ contract DuelTest is Test {
         vm.prank(bob);
         cards.setCard(0, "x", [uint8(1), 1, 1, 1, 1, 1]);
         assertEq(cards.statsOf(0)[0], 1);
+    }
+
+    function _live() internal returns (uint256 id, address judge) {
+        judge = makeAddr("judge");
+        duel.setJudge(judge);
+        id = _start();
+        _play(id, 0, 1); // a wins
+        _play(id, 1, 0); // b wins, so round 3 decides
+        assertTrue(duel.getMatch(id).awaitingVerdict == false);
+        _play(id, 2, 3); // equal stats, but this round goes to the judge
+        assertTrue(duel.getMatch(id).awaitingVerdict);
+    }
+
+    function test_liveDuelJudgeDecides() public {
+        (uint256 id, address judge) = _live();
+        vm.prank(alice);
+        vm.expectRevert(Duel.NotJudge.selector);
+        duel.settleLive(id, 1, "x");
+        vm.prank(judge);
+        vm.expectRevert(Duel.BadOutcome.selector);
+        duel.settleLive(id, 3, "x");
+        vm.prank(judge);
+        duel.settleLive(id, 2, keccak256("prompt|answerA|answerB|b"));
+        assertEq(bob.balance, 11 ether);
+        assertEq(address(duel).balance, 0);
+    }
+
+    function test_liveDuelFallsBackToStats() public {
+        (uint256 id,) = _live();
+        vm.expectRevert(Duel.TooEarly.selector);
+        duel.settleLiveByStats(id);
+        // no timeout claim while waiting for the judge
+        vm.warp(block.timestamp + 61);
+        vm.expectRevert(Duel.WrongState.selector);
+        duel.claimTimeout(id);
+        vm.warp(block.timestamp + 10 minutes);
+        duel.settleLiveByStats(id);
+        // equal stats in round 3: draw, both refunded
+        assertEq(alice.balance, 10 ether);
+        assertEq(bob.balance, 10 ether);
+    }
+
+    function test_noCommitsWhileWaitingForVerdict() public {
+        (uint256 id,) = _live();
+        vm.prank(alice);
+        vm.expectRevert(Duel.WrongState.selector);
+        duel.commit(id, bytes32(uint256(1)));
     }
 }
