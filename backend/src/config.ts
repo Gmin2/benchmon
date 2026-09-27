@@ -11,6 +11,12 @@ export const config = {
   rpcUrl: process.env.RPC_URL ?? "https://testnet-rpc.monad.xyz",
   port: Number(process.env.PORT ?? 8788),
   judgeKey: need("JUDGE_KEY") as Hex,
+  // fighters go through openrouter; kimi is the judge through moonshot directly (kimi bounty)
+  openrouterKey: process.env.OPENROUTER_API_KEY ?? "",
+  moonshotKey: process.env.MOONSHOT_API_KEY ?? "",
+  moonshotBase: process.env.MOONSHOT_BASE ?? "https://api.moonshot.ai/v1",
+  judgeModel: process.env.JUDGE_MODEL ?? "kimi-k3",
+  duelsDir: process.env.DUELS_DIR ?? new URL("../../tmp/duels/", import.meta.url).pathname,
   contracts: {
     cards: (process.env.CARDS ?? "0xDa6f2436E78d4CD7490Df5F0D593055CfAa62345") as Address,
     duel: (process.env.DUEL ?? "0x2d212A3898139EdEE5b27A2FCA8063edf9d51805") as Address,

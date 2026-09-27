@@ -2,7 +2,7 @@ import { config } from "./config";
 import { judge, pub } from "./chain";
 import { duelAbi } from "./abi";
 import { watchLiveDuels } from "./watcher";
-import { settle } from "./settle";
+import { judgeLiveDuel } from "./live";
 
 const server = Bun.serve({
   port: config.port,
@@ -28,9 +28,8 @@ const server = Bun.serve({
 
 console.log(`backend on :${server.port}, judge ${judge.address}`);
 
-// first slice: a placeholder judge that always gives the live round to a, to prove the event to tx loop
 watchLiveDuels(async (d) => {
   console.log(`live duel ${d.id}: card ${d.cardA} vs ${d.cardB}, arena ${d.arena}, block ${d.block}`);
-  const r = await settle(d.id, { outcome: 1, transcript: `placeholder judge, match ${d.id}` });
+  const r = await judgeLiveDuel(d);
   console.log(`match ${d.id} settled`, r);
 });
