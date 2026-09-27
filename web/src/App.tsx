@@ -5,6 +5,7 @@ import { createWaasWalletAccounts } from "@dynamic-labs-sdk/client/waas";
 import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
+import { Game } from "./Game";
 
 const monad = createPublicClient({ transport: http("https://testnet-rpc.monad.xyz") });
 type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
@@ -108,6 +109,7 @@ function Account() {
       )}
       <button className="text-sm underline w-fit" onClick={() => logout()}>log out</button>
       {err && <p className="text-red-600 text-sm">{err}</p>}
+      {evm && <Game />}
     </div>
   );
 }
