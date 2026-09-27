@@ -1,5 +1,5 @@
 {
-  "name": "model-cards-backend",
+  "name": "benchmon-backend",
   "private": true,
   "type": "module",
   "scripts": {

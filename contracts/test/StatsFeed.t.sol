@@ -80,7 +80,7 @@ contract StatsFeedTest is Test {
 
     function test_onlyTheExpectedWorkflow() public {
         address me = makeAddr("workflow owner");
-        bytes32 wid = keccak256("model cards stats");
+        bytes32 wid = keccak256("benchmon stats");
         feed.setWorkflow(me, wid);
         vm.startPrank(forwarder);
         // someone else's workflow, delivered by the same forwarder
