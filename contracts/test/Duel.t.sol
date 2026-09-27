@@ -10,6 +10,7 @@ contract DuelTest is Test {
     Duel duel;
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
+    uint16[5] deck = [uint16(0), 1, 2, 3, 4];
 
     function setUp() public {
         cards = new CardStats();
@@ -41,9 +42,9 @@ contract DuelTest is Test {
 
     function _start() internal returns (uint256 id) {
         vm.prank(alice);
-        id = duel.create{value: 1 ether}();
+        id = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
-        duel.join{value: 1 ether}(id);
+        duel.join{value: 1 ether}(id, deck);
     }
 
     function test_winnerTakesPot() public {
@@ -108,12 +109,12 @@ contract DuelTest is Test {
 
     function test_wrongStakeAndStranger() public {
         vm.prank(alice);
-        uint256 id = duel.create{value: 1 ether}();
+        uint256 id = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
         vm.expectRevert(Duel.WrongStake.selector);
-        duel.join{value: 0.5 ether}(id);
+        duel.join{value: 0.5 ether}(id, deck);
         vm.prank(bob);
-        duel.join{value: 1 ether}(id);
+        duel.join{value: 1 ether}(id, deck);
         vm.prank(makeAddr("eve"));
         vm.expectRevert(Duel.NotPlayer.selector);
         duel.commit(id, bytes32(uint256(1)));
@@ -121,7 +122,7 @@ contract DuelTest is Test {
 
     function test_cancelBeforeJoin() public {
         vm.prank(alice);
-        uint256 id = duel.create{value: 1 ether}();
+        uint256 id = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
         vm.expectRevert(Duel.NotPlayer.selector);
         duel.cancel(id);
@@ -130,7 +131,7 @@ contract DuelTest is Test {
         assertEq(alice.balance, 10 ether);
         vm.prank(bob);
         vm.expectRevert(Duel.WrongState.selector);
-        duel.join{value: 1 ether}(id);
+        duel.join{value: 1 ether}(id, deck);
     }
 
     function test_statsAreFrozenAtJoin() public {
@@ -141,9 +142,9 @@ contract DuelTest is Test {
         assertEq(duel.getMatch(id).winsA, 1);
         // a new match sees the update
         vm.prank(alice);
-        uint256 id2 = duel.create{value: 1 ether}();
+        uint256 id2 = duel.create{value: 1 ether}(deck);
         vm.prank(bob);
-        duel.join{value: 1 ether}(id2);
+        duel.join{value: 1 ether}(id2, deck);
         _play(id2, 0, 1);
         assertEq(duel.getMatch(id2).winsB, 1);
     }
@@ -213,5 +214,44 @@ contract DuelTest is Test {
         vm.prank(alice);
         vm.expectRevert(Duel.WrongState.selector);
         duel.commit(id, bytes32(uint256(1)));
+    }
+
+    function test_deckRules() public {
+        // duplicate card
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadDeck.selector);
+        duel.create{value: 1 ether}([uint16(0), 0, 1, 2, 3]);
+        // card that does not exist
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadCard.selector);
+        duel.create{value: 1 ether}([uint16(0), 1, 2, 3, 7]);
+        // over the power cap
+        duel.setDeckCap(1000);
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadDeck.selector);
+        duel.create{value: 1 ether}(deck);
+    }
+
+    function test_canOnlyPlayFromDeck() public {
+        cards.setCard(5, "extra", [uint8(20), 20, 20, 20, 20, 20]);
+        vm.prank(alice);
+        uint256 id = duel.create{value: 1 ether}(deck);
+        vm.prank(bob);
+        duel.join{value: 1 ether}(id, [uint16(1), 2, 3, 4, 5]);
+        _commit(alice, id, 5, "sa");
+        _commit(bob, id, 1, "sb");
+        vm.prank(alice);
+        vm.expectRevert(Duel.NotInDeck.selector);
+        duel.reveal(id, 5, "sa");
+    }
+
+    function test_typeTriangle() public {
+        // reasoning type, speed type, cost type; same arena stat so only the triangle decides
+        uint8[6] memory r = [uint8(50), 50, 90, 10, 10, 50];
+        uint8[6] memory sp = [uint8(50), 50, 10, 90, 10, 50];
+        uint8[6] memory c = [uint8(50), 50, 10, 10, 90, 50];
+        assertEq(duel.typeOf(r), 0);
+        assertEq(duel.typeOf(sp), 1);
+        assertEq(duel.typeOf(c), 2);
     }
 }

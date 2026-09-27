@@ -14,6 +14,7 @@ contract Duel {
     uint8 public constant LIVE_ROUND = 2;
     uint256 public constant MOVE_TIMEOUT = 60;
     uint256 public constant VERDICT_TIMEOUT = 10 minutes;
+    uint8 public constant DECK_SIZE = 5;
 
     enum State {
         Open,
@@ -42,11 +43,15 @@ contract Duel {
         uint256 usedB;
         uint64 statsVersion;
         bool awaitingVerdict;
+        uint256 deckA;
+        uint256 deckB;
     }
 
     CardStats public immutable cards;
     address public owner;
     address public judge;
+    // total power (sum of all six stats) a deck of five may have, so nobody just brings the five strongest models
+    uint256 public deckCap = 1900;
     uint256 public matchCount;
     mapping(uint256 => Match) internal matches;
 
@@ -60,6 +65,7 @@ contract Duel {
     event LiveDuel(uint256 indexed id, uint16 cardA, uint16 cardB, uint8 arena);
     event Verdict(uint256 indexed id, uint8 outcome, bytes32 duelHash, bool byJudge);
     event JudgeSet(address judge);
+    event DeckCapSet(uint256 cap);
 
     error WrongState();
     error WrongStake();
@@ -72,11 +78,19 @@ contract Duel {
     error BadCard();
     error NotJudge();
     error BadOutcome();
+    error BadDeck();
+    error NotInDeck();
 
     constructor(CardStats _cards, address _judge) {
         cards = _cards;
         owner = msg.sender;
         judge = _judge;
+    }
+
+    function setDeckCap(uint256 cap) external {
+        if (msg.sender != owner) revert NotJudge();
+        deckCap = cap;
+        emit DeckCapSet(cap);
     }
 
     function setJudge(address j) external {
@@ -89,16 +103,19 @@ contract Duel {
         return matches[id];
     }
 
-    function create() external payable returns (uint256 id) {
+    function create(uint16[5] calldata deck) external payable returns (uint256 id) {
         if (msg.value == 0) revert WrongStake();
+        uint256 bits = _deckBits(deck);
+        _checkDeck(bits, cards.version());
         id = matchCount++;
         Match storage m = matches[id];
         m.a = msg.sender;
         m.stake = msg.value;
+        m.deckA = bits;
         emit Created(id, msg.sender, msg.value);
     }
 
-    function join(uint256 id) external payable {
+    function join(uint256 id, uint16[5] calldata deck) external payable {
         Match storage m = matches[id];
         if (m.state != State.Open || m.a == address(0)) revert WrongState();
         if (msg.value != m.stake) revert WrongStake();
@@ -107,6 +124,10 @@ contract Duel {
         m.state = State.Playing;
         m.seed = keccak256(abi.encode(id, m.a, msg.sender, block.prevrandao));
         m.statsVersion = cards.version();
+        // both decks are checked against the stats this match will use
+        m.deckB = _deckBits(deck);
+        _checkDeck(m.deckA, m.statsVersion);
+        _checkDeck(m.deckB, m.statsVersion);
         m.arena = uint8(uint256(m.seed) % 6);
         m.deadline = uint64(block.timestamp + MOVE_TIMEOUT);
         emit Joined(id, msg.sender, m.arena);
@@ -150,6 +171,7 @@ contract Duel {
         // a card that does not exist would make the round unsettleable and hand the other side a timeout win
         if (card > 255 || !cards.exists(card, m.statsVersion)) revert BadCard();
         uint256 bit = 1 << card;
+        if ((isA ? m.deckA : m.deckB) & bit == 0) revert NotInDeck();
         if (isA) {
             if (m.usedA & bit != 0) revert CardUsed();
             m.usedA |= bit;
@@ -211,11 +233,47 @@ contract Duel {
     }
 
     function _byStats(Match storage m) internal view returns (uint8) {
-        uint8 sa = cards.statsAt(m.cardA, m.statsVersion)[m.arena];
-        uint8 sb = cards.statsAt(m.cardB, m.statsVersion)[m.arena];
+        uint8[6] memory a = cards.statsAt(m.cardA, m.statsVersion);
+        uint8[6] memory b = cards.statsAt(m.cardB, m.statsVersion);
+        uint256 sa = uint256(a[m.arena]) * 10;
+        uint256 sb = uint256(b[m.arena]) * 10;
+        uint8 ta = typeOf(a);
+        uint8 tb = typeOf(b);
+        // reasoning beats speed, speed beats cost, cost beats reasoning: +10%
+        if ((ta + 1) % 3 == tb) sa = sa * 11 / 10;
+        else if ((tb + 1) % 3 == ta) sb = sb * 11 / 10;
         if (sa > sb) return 1;
         if (sb > sa) return 2;
         return 0;
+    }
+
+    // 0 reasoning, 1 speed, 2 cost: whichever of the three is highest, ties go to the earlier one
+    function typeOf(uint8[6] memory s) public pure returns (uint8) {
+        if (s[2] >= s[3] && s[2] >= s[4]) return 0;
+        if (s[3] >= s[4]) return 1;
+        return 2;
+    }
+
+    function _deckBits(uint16[5] calldata deck) internal pure returns (uint256 bits) {
+        for (uint256 i; i < DECK_SIZE; i++) {
+            if (deck[i] > 255) revert BadDeck();
+            uint256 bit = 1 << deck[i];
+            if (bits & bit != 0) revert BadDeck();
+            bits |= bit;
+        }
+    }
+
+    function _checkDeck(uint256 bits, uint64 v) internal view {
+        uint256 power;
+        for (uint256 id; bits != 0; id++) {
+            if (bits & 1 != 0) {
+                if (!cards.exists(id, v)) revert BadCard();
+                uint8[6] memory s = cards.statsAt(id, v);
+                power += uint256(s[0]) + s[1] + s[2] + s[3] + s[4] + s[5];
+            }
+            bits >>= 1;
+        }
+        if (power > deckCap) revert BadDeck();
     }
 
     function _advance(uint256 id, Match storage m, uint8 outcome) internal {

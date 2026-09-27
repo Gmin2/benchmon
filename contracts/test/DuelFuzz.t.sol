@@ -49,6 +49,7 @@ contract DuelFuzzTest is Test {
     function setUp() public {
         cards = new CardStats();
         duel = new Duel(cards, address(0));
+        duel.setDeckCap(type(uint256).max);
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
     }
@@ -63,11 +64,23 @@ contract DuelFuzzTest is Test {
         }
     }
 
+    // independent re-implementation of the round scoring, including the type triangle
+    function _scores(uint16 ca, uint16 cb, uint8 arena) internal view returns (uint256 a, uint256 b) {
+        uint8[6] memory x = cards.statsOf(ca);
+        uint8[6] memory y = cards.statsOf(cb);
+        a = uint256(x[arena]) * 10;
+        b = uint256(y[arena]) * 10;
+        uint8 tx_ = x[2] >= x[3] && x[2] >= x[4] ? 0 : (x[3] >= x[4] ? 1 : 2);
+        uint8 ty = y[2] >= y[3] && y[2] >= y[4] ? 0 : (y[3] >= y[4] ? 1 : 2);
+        if ((tx_ + 1) % 3 == ty) a = a * 11 / 10;
+        else if ((ty + 1) % 3 == tx_) b = b * 11 / 10;
+    }
+
     function _start(uint256 stake) internal returns (uint256 id) {
         vm.prank(alice);
-        id = duel.create{value: stake}();
+        id = duel.create{value: stake}([uint16(0), 1, 2, 6, 7]);
         vm.prank(bob);
-        duel.join{value: stake}(id);
+        duel.join{value: stake}(id, [uint16(3), 4, 5, 6, 7]);
     }
 
     function _move(uint256 id, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb) internal {
@@ -95,8 +108,7 @@ contract DuelFuzzTest is Test {
             uint8 arena = duel.getMatch(id).arena;
             uint16 ca = r;
             uint16 cb = r + 3;
-            uint8 a = cards.statsOf(ca)[arena];
-            uint8 b = cards.statsOf(cb)[arena];
+            (uint256 a, uint256 b) = _scores(ca, cb, arena);
             if (a > b) winsA++;
             else if (b > a) winsB++;
             _move(id, ca, cb, keccak256(abi.encode(salt, r, "a")), keccak256(abi.encode(salt, r, "b")));
@@ -163,6 +175,14 @@ contract Handler is Test {
         vm.deal(address(this), 1e30);
     }
 
+    // five distinct cards out of 0..7 from a seed
+    function _deck(uint256 seed) internal pure returns (uint16[5] memory d) {
+        uint16 start = uint16(seed % 8);
+        for (uint16 i; i < 5; i++) {
+            d[i] = (start + i) % 8;
+        }
+    }
+
     function _actor(uint256 i) internal view returns (address) {
         return actors[i % 3];
     }
@@ -170,7 +190,7 @@ contract Handler is Test {
     function create(uint256 who, uint96 stake) external {
         stake = uint96(bound(stake, 1, 5 ether));
         vm.prank(_actor(who));
-        uint256 id = duel.create{value: stake}();
+        uint256 id = duel.create{value: stake}(_deck(who + stake));
         ids.push(id);
         stakeOf[id] = stake;
     }
@@ -179,7 +199,7 @@ contract Handler is Test {
         if (ids.length == 0) return;
         uint256 id = ids[pick % ids.length];
         vm.prank(_actor(who));
-        try duel.join{value: stakeOf[id]}(id) {} catch {}
+        try duel.join{value: stakeOf[id]}(id, _deck(who * 7 + pick)) {} catch {}
     }
 
     function commit(uint256 who, uint256 pick, uint16 card, bytes32 salt) external {
@@ -247,9 +267,8 @@ contract Handler is Test {
         for (uint16 r; r < 3; r++) {
             Duel.Match memory m = duel.getMatch(id);
             if (m.state != Duel.State.Playing || m.awaitingVerdict || m.commitA != 0 || m.commitB != 0) return;
-            uint16 ca = uint16((seed + r) % 8);
-            uint16 cb = uint16((seed / 8 + r * 3) % 8);
-            if (m.usedA & (1 << ca) != 0 || m.usedB & (1 << cb) != 0) return;
+            uint16 ca = _pickFrom(m.deckA & ~m.usedA, seed + r);
+            uint16 cb = _pickFrom(m.deckB & ~m.usedB, seed / 7 + r);
             bytes32 sa = keccak256(abi.encode(seed, r, 1));
             bytes32 sb = keccak256(abi.encode(seed, r, 2));
             vm.prank(m.a);
@@ -261,6 +280,15 @@ contract Handler is Test {
             vm.prank(m.b);
             duel.reveal(id, cb, sb);
         }
+    }
+
+    function _pickFrom(uint256 bits, uint256 seed) internal pure returns (uint16) {
+        uint16[8] memory opts;
+        uint256 n;
+        for (uint16 i; i < 8; i++) {
+            if (bits & (1 << i) != 0) opts[n++] = i;
+        }
+        return opts[seed % n];
     }
 
     function cancel(uint256 who, uint256 pick) external {
