@@ -47,6 +47,7 @@ contract Duel {
     event Revealed(uint256 indexed id, address indexed player, uint8 round, uint16 card);
     event RoundWon(uint256 indexed id, uint8 round, address winner, uint8 nextArena);
     event Finished(uint256 indexed id, address winner, uint256 payout);
+    event Cancelled(uint256 indexed id);
 
     error WrongState();
     error WrongStake();
@@ -56,6 +57,7 @@ contract Duel {
     error BadReveal();
     error CardUsed();
     error TooEarly();
+    error BadCard();
 
     constructor(CardStats _cards) {
         cards = _cards;
@@ -87,6 +89,16 @@ contract Duel {
         emit Joined(id, msg.sender, m.arena);
     }
 
+    // the creator can take the stake back while nobody has joined
+    function cancel(uint256 id) external {
+        Match storage m = matches[id];
+        if (m.state != State.Open || m.a == address(0)) revert WrongState();
+        if (msg.sender != m.a) revert NotPlayer();
+        m.state = State.Done;
+        _pay(m.a, m.stake);
+        emit Cancelled(id);
+    }
+
     // commit = keccak256(abi.encode(id, round, player, card, salt))
     function commit(uint256 id, bytes32 c) external {
         Match storage m = matches[id];
@@ -109,21 +121,23 @@ contract Duel {
         if (m.state != State.Playing) revert WrongState();
         if (m.commitA == 0 || m.commitB == 0) revert NotCommitted();
         bytes32 c = keccak256(abi.encode(id, m.round, msg.sender, card, salt));
+        bool isA = msg.sender == m.a;
+        if (!isA && msg.sender != m.b) revert NotPlayer();
+        if (isA ? (m.revealedA || c != m.commitA) : (m.revealedB || c != m.commitB)) revert BadReveal();
+        // a card that does not exist would make the round unsettleable and hand the other side a timeout win
+        if (card > 255 || card >= cards.cardCount()) revert BadCard();
+        cards.statsOf(card);
         uint256 bit = 1 << card;
-        if (msg.sender == m.a) {
-            if (m.revealedA || c != m.commitA) revert BadReveal();
+        if (isA) {
             if (m.usedA & bit != 0) revert CardUsed();
             m.usedA |= bit;
             m.revealedA = true;
             m.cardA = card;
-        } else if (msg.sender == m.b) {
-            if (m.revealedB || c != m.commitB) revert BadReveal();
+        } else {
             if (m.usedB & bit != 0) revert CardUsed();
             m.usedB |= bit;
             m.revealedB = true;
             m.cardB = card;
-        } else {
-            revert NotPlayer();
         }
         m.seed = keccak256(abi.encode(m.seed, salt));
         emit Revealed(id, msg.sender, m.round, card);

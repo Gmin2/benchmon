@@ -1,0 +1,256 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Test} from "forge-std/Test.sol";
+import {CardStats} from "../src/CardStats.sol";
+import {Duel} from "../src/Duel.sol";
+
+contract DuelFuzzTest is Test {
+    CardStats cards;
+    Duel duel;
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+    uint256 constant CARDS = 8;
+
+    function setUp() public {
+        cards = new CardStats();
+        duel = new Duel(cards);
+        vm.deal(alice, 1000 ether);
+        vm.deal(bob, 1000 ether);
+    }
+
+    function _seed(uint256 seed) internal {
+        for (uint256 i; i < CARDS; i++) {
+            uint8[6] memory s;
+            for (uint256 j; j < 6; j++) {
+                s[j] = uint8(bound(uint256(keccak256(abi.encode(seed, i, j))), 1, 99));
+            }
+            cards.setCard(i, "c", s);
+        }
+    }
+
+    function _start(uint256 stake) internal returns (uint256 id) {
+        vm.prank(alice);
+        id = duel.create{value: stake}();
+        vm.prank(bob);
+        duel.join{value: stake}(id);
+    }
+
+    function _move(uint256 id, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb) internal {
+        uint8 round = duel.getMatch(id).round;
+        vm.prank(alice);
+        duel.commit(id, keccak256(abi.encode(id, round, alice, ca, sa)));
+        vm.prank(bob);
+        duel.commit(id, keccak256(abi.encode(id, round, bob, cb, sb)));
+        vm.prank(alice);
+        duel.reveal(id, ca, sa);
+        vm.prank(bob);
+        duel.reveal(id, cb, sb);
+    }
+
+    // any full match: money is conserved, nothing stays in the contract, and the payout matches the stats
+    function testFuzz_fullMatchConservesMoney(uint256 seed, uint96 stakeRaw, bytes32 salt) public {
+        _seed(seed);
+        uint256 stake = bound(stakeRaw, 1, 10 ether);
+        uint256 before = alice.balance + bob.balance;
+        uint256 id = _start(stake);
+
+        uint8 winsA;
+        uint8 winsB;
+        for (uint16 r; r < 3 && duel.getMatch(id).state == Duel.State.Playing; r++) {
+            uint8 arena = duel.getMatch(id).arena;
+            uint16 ca = r;
+            uint16 cb = r + 3;
+            uint8 a = cards.statsOf(ca)[arena];
+            uint8 b = cards.statsOf(cb)[arena];
+            if (a > b) winsA++;
+            else if (b > a) winsB++;
+            _move(id, ca, cb, keccak256(abi.encode(salt, r, "a")), keccak256(abi.encode(salt, r, "b")));
+        }
+
+        assertEq(uint8(duel.getMatch(id).state), uint8(Duel.State.Done));
+        assertEq(address(duel).balance, 0);
+        assertEq(alice.balance + bob.balance, before);
+        if (winsA > winsB) assertEq(alice.balance, 1000 ether + stake);
+        else if (winsB > winsA) assertEq(bob.balance, 1000 ether + stake);
+        else assertEq(alice.balance, 1000 ether);
+    }
+
+    // a reveal that does not match the commit never goes through
+    function testFuzz_wrongRevealReverts(uint16 card, uint16 fake, bytes32 salt, bytes32 fakeSalt) public {
+        _seed(1);
+        vm.assume(card != fake || salt != fakeSalt);
+        uint256 id = _start(1 ether);
+        vm.prank(alice);
+        duel.commit(id, keccak256(abi.encode(id, uint8(0), alice, card, salt)));
+        vm.prank(bob);
+        duel.commit(id, keccak256(abi.encode(id, uint8(0), bob, uint16(1), bytes32("b"))));
+        vm.prank(alice);
+        vm.expectRevert(Duel.BadReveal.selector);
+        duel.reveal(id, fake, fakeSalt);
+    }
+
+    // a player who reveals any card id, real or not, must not be able to block the other side and win by timeout
+    function testFuzz_cannotWinWithAFakeCard(uint16 fakeCard) public {
+        _seed(2);
+        fakeCard = uint16(bound(fakeCard, CARDS, type(uint16).max));
+        uint256 id = _start(1 ether);
+        vm.prank(alice);
+        duel.commit(id, keccak256(abi.encode(id, uint8(0), alice, fakeCard, bytes32("a"))));
+        vm.prank(bob);
+        duel.commit(id, keccak256(abi.encode(id, uint8(0), bob, uint16(1), bytes32("b"))));
+        vm.prank(alice);
+        try duel.reveal(id, fakeCard, "a") {} catch {}
+        vm.prank(bob);
+        try duel.reveal(id, 1, "b") {} catch {}
+        vm.warp(block.timestamp + 61);
+        if (duel.getMatch(id).state == Duel.State.Playing) duel.claimTimeout(id);
+        assertLe(alice.balance, 1000 ether, "a fake card won money");
+    }
+}
+
+// random sequences of moves by two players and a stranger; the contract should always hold exactly
+// the stakes of unfinished matches
+contract Handler is Test {
+    Duel public duel;
+    address[3] actors;
+    uint256[] public ids;
+    uint256 public held;
+    mapping(uint256 => uint256) public stakeOf;
+    mapping(uint256 => bool) public counted;
+
+    constructor(Duel _duel) {
+        duel = _duel;
+        actors = [makeAddr("p1"), makeAddr("p2"), makeAddr("p3")];
+        for (uint256 i; i < 3; i++) {
+            vm.deal(actors[i], 1e30);
+        }
+        // stakes are sent from this contract while pranking as an actor
+        vm.deal(address(this), 1e30);
+    }
+
+    function _actor(uint256 i) internal view returns (address) {
+        return actors[i % 3];
+    }
+
+    function create(uint256 who, uint96 stake) external {
+        stake = uint96(bound(stake, 1, 5 ether));
+        vm.prank(_actor(who));
+        uint256 id = duel.create{value: stake}();
+        ids.push(id);
+        stakeOf[id] = stake;
+    }
+
+    function join(uint256 who, uint256 pick) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        vm.prank(_actor(who));
+        try duel.join{value: stakeOf[id]}(id) {} catch {}
+    }
+
+    function commit(uint256 who, uint256 pick, uint16 card, bytes32 salt) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        card = uint16(bound(card, 0, 9));
+        address p = _actor(who);
+        uint8 round = duel.getMatch(id).round;
+        vm.prank(p);
+        try duel.commit(id, keccak256(abi.encode(id, round, p, card, salt))) {} catch {}
+        lastCard[id][p] = card;
+        lastSalt[id][p] = salt;
+    }
+
+    mapping(uint256 => mapping(address => uint16)) lastCard;
+    mapping(uint256 => mapping(address => bytes32)) lastSalt;
+
+    function reveal(uint256 who, uint256 pick) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        address p = _actor(who);
+        vm.prank(p);
+        try duel.reveal(id, lastCard[id][p], lastSalt[id][p]) {} catch {}
+    }
+
+    // both players of a live match commit and reveal in one go, with cards that may be fake or reused
+    function playRound(uint256 pick, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb, bool skipB) external {
+        if (ids.length == 0) return;
+        uint256 id = ids[pick % ids.length];
+        Duel.Match memory m = duel.getMatch(id);
+        if (m.state != Duel.State.Playing) return;
+        ca = uint16(bound(ca, 0, 9));
+        cb = uint16(bound(cb, 0, 9));
+        vm.prank(m.a);
+        try duel.commit(id, keccak256(abi.encode(id, m.round, m.a, ca, sa))) {} catch {}
+        vm.prank(m.b);
+        try duel.commit(id, keccak256(abi.encode(id, m.round, m.b, cb, sb))) {} catch {}
+        vm.prank(m.a);
+        try duel.reveal(id, ca, sa) {} catch {}
+        if (skipB) return;
+        vm.prank(m.b);
+        try duel.reveal(id, cb, sb) {} catch {}
+        if (duel.getMatch(id).round > m.round) roundsPlayed++;
+        if (duel.getMatch(id).state == Duel.State.Done) finished++;
+    }
+
+    uint256 public roundsPlayed;
+    uint256 public finished;
+
+    function cancel(uint256 who, uint256 pick) external {
+        if (ids.length == 0) return;
+        vm.prank(_actor(who));
+        try duel.cancel(ids[pick % ids.length]) {} catch {}
+    }
+
+    function done() external view returns (uint256 n, uint256 rounds) {
+        for (uint256 i; i < ids.length; i++) {
+            Duel.Match memory m = duel.getMatch(ids[i]);
+            if (m.state == Duel.State.Done) n++;
+            rounds += m.round;
+        }
+    }
+
+    function timeout(uint256 pick, uint8 secs) external {
+        if (ids.length == 0) return;
+        vm.warp(block.timestamp + secs);
+        try duel.claimTimeout(ids[pick % ids.length]) {} catch {}
+    }
+
+    function expected() external view returns (uint256 sum) {
+        for (uint256 i; i < ids.length; i++) {
+            Duel.Match memory m = duel.getMatch(ids[i]);
+            if (m.state == Duel.State.Open) sum += m.stake;
+            else if (m.state == Duel.State.Playing) sum += 2 * m.stake;
+        }
+    }
+}
+
+contract DuelInvariantTest is Test {
+    Duel duel;
+    Handler handler;
+
+    function setUp() public {
+        CardStats cards = new CardStats();
+        // cards 0 to 7 exist, 8 and 9 do not, so the handler also tries fake cards
+        for (uint256 i; i < 8; i++) {
+            cards.setCard(
+                i, "c", [uint8(10 + i * 10), uint8(90 - i * 10), 50, uint8(20 + i * 5), 60, uint8(30 + i * 7)]
+            );
+        }
+        duel = new Duel(cards);
+        handler = new Handler(duel);
+        targetContract(address(handler));
+        bytes4[] memory sel = new bytes4[](7);
+        sel[0] = Handler.create.selector;
+        sel[1] = Handler.join.selector;
+        sel[2] = Handler.commit.selector;
+        sel[3] = Handler.reveal.selector;
+        sel[4] = Handler.playRound.selector;
+        sel[5] = Handler.cancel.selector;
+        sel[6] = Handler.timeout.selector;
+        targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
+    }
+
+    function invariant_balanceEqualsOpenStakes() public view {
+        assertEq(address(duel).balance, handler.expected());
+    }
+}

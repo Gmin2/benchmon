@@ -118,4 +118,18 @@ contract DuelTest is Test {
         vm.expectRevert(Duel.NotPlayer.selector);
         duel.commit(id, bytes32(uint256(1)));
     }
+
+    function test_cancelBeforeJoin() public {
+        vm.prank(alice);
+        uint256 id = duel.create{value: 1 ether}();
+        vm.prank(bob);
+        vm.expectRevert(Duel.NotPlayer.selector);
+        duel.cancel(id);
+        vm.prank(alice);
+        duel.cancel(id);
+        assertEq(alice.balance, 10 ether);
+        vm.prank(bob);
+        vm.expectRevert(Duel.WrongState.selector);
+        duel.join{value: 1 ether}(id);
+    }
 }
