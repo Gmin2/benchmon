@@ -73,4 +73,37 @@ contract StatsFeedTest is Test {
         feed.onReport("", _report(0, 60));
         assertEq(cards.statsOf(0)[0], 60);
     }
+
+    function _meta(bytes32 id, address wfOwner) internal pure returns (bytes memory) {
+        return abi.encodePacked(id, bytes10("stats"), wfOwner, bytes2(0));
+    }
+
+    function test_onlyTheExpectedWorkflow() public {
+        address me = makeAddr("workflow owner");
+        bytes32 wid = keccak256("model cards stats");
+        feed.setWorkflow(me, wid);
+        vm.startPrank(forwarder);
+        // someone else's workflow, delivered by the same forwarder
+        vm.expectRevert(IStatsFeed.WrongWorkflow.selector);
+        feed.onReport(_meta(wid, makeAddr("attacker")), _report(0, 11));
+        vm.expectRevert(IStatsFeed.WrongWorkflow.selector);
+        feed.onReport(_meta(keccak256("other"), me), _report(0, 11));
+        vm.expectRevert(IStatsFeed.WrongWorkflow.selector);
+        feed.onReport("", _report(0, 11));
+        // ours, with the 64 byte production metadata
+        feed.onReport(_meta(wid, me), _report(0, 55));
+        vm.stopPrank();
+        assertEq(cards.statsOf(0)[0], 55);
+    }
+
+    function testFuzz_ownerCheckFromMetadata(address wfOwner, address other, bytes32 wid) public {
+        vm.assume(wfOwner != address(0) && other != wfOwner);
+        feed.setWorkflow(wfOwner, bytes32(0));
+        vm.startPrank(forwarder);
+        vm.expectRevert(IStatsFeed.WrongWorkflow.selector);
+        feed.onReport(_meta(wid, other), _report(0, 20));
+        feed.onReport(_meta(wid, wfOwner), _report(0, 21));
+        vm.stopPrank();
+        assertEq(cards.statsOf(0)[0], 21);
+    }
 }

@@ -113,8 +113,8 @@ contract MatchMarket is IMatchMarket, Ownable {
         if (amount == 0) revert TooLittle();
         delete shares[id][msg.sender];
         markets[id].paidOut += amount;
-        _pay(msg.sender, amount);
         emit Redeemed(id, msg.sender, amount);
+        _pay(msg.sender, amount);
     }
 
     // what the house gets back once the match is over: collateral minus everything the shares can claim

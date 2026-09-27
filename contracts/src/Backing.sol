@@ -41,8 +41,8 @@ contract Backing is IBacking {
         uint256 amount = claimable(id, msg.sender);
         if (amount == 0) revert NothingToClaim();
         delete backed[id][msg.sender];
+        emit Claimed(id, msg.sender, amount);
         (bool ok,) = msg.sender.call{value: amount}("");
         require(ok, "pay failed");
-        emit Claimed(id, msg.sender, amount);
     }
 }

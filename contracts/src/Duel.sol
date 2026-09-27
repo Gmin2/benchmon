@@ -276,8 +276,8 @@ contract Duel is IDuel, Ownable {
         uint256 amount = owed[msg.sender];
         if (amount == 0) revert NothingOwed();
         owed[msg.sender] = 0;
+        emit Withdrawn(msg.sender, amount);
         (bool ok,) = msg.sender.call{value: amount}("");
         require(ok, "pay failed");
-        emit Withdrawn(msg.sender, amount);
     }
 }

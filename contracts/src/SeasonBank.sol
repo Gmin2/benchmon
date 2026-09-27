@@ -18,6 +18,7 @@ contract SeasonBank is ISeasonBank, Ownable {
     mapping(address => mapping(uint256 => bool)) public hasPass;
 
     constructor(address _usdc, uint256 _passPrice) {
+        if (_usdc == address(0)) revert ZeroAmount();
         usdc = _usdc;
         _initializeOwner(msg.sender);
         passPrice = _passPrice;
