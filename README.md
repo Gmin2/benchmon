@@ -6,3 +6,7 @@ a pvp card battle game on monad where the cards are real ai models. stats come f
 - `backend/` bun + viem: watches live duels, runs the real models, posts the verdict with the transcript hash
 - `cre/` chainlink cre workflow that writes card stats through chainlink's forwarder
 - `scripts/` end to end match scripts against any rpc
+
+## ui and brand
+
+the hand-off for the ui and brand work is `../benchmon_ui_handoff.md` (next chat).
