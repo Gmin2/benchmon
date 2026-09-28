@@ -7,7 +7,7 @@ import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { Game } from "./Game";
 import { useWallet } from "./useWallet";
-import { sendSponsored } from "./kernel";
+import { sendSponsored } from "./gas";
 
 function SmartAccountLine() {
   const { address, err, kernel } = useWallet();
