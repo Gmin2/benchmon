@@ -4,9 +4,32 @@ import { getNetworksData, logout, sendEmailOTP, verifyOTP } from "@dynamic-labs-
 import { createWaasWalletAccounts } from "@dynamic-labs-sdk/client/waas";
 import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
-import { isSmartAccount } from "./smart";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { Game } from "./Game";
+import { useWallet } from "./useWallet";
+import { sendSponsored } from "./kernel";
+
+function SmartAccountLine() {
+  const { address, err, kernel } = useWallet();
+  const [out, setOut] = useState("");
+  const ping = () => {
+    const t = performance.now();
+    sendSponsored(kernel!, { to: address!, data: "0x", value: 0n })
+      .then((h) => setOut(`sponsored tx ${h} in ${(performance.now() - t).toFixed(0)}ms`))
+      .catch((e: Error & { details?: string; url?: string; status?: number; body?: unknown; shortMessage?: string }) => {
+        const info = { short: e.shortMessage, details: e.details, status: e.status, url: e.url?.replace(/v3\/[^/]+/, "v3/..."), body: JSON.stringify(e.body ?? "").slice(0, 400) };
+        console.log(`bm: sponsor error ${JSON.stringify(info)}`);
+        setOut(`sponsored tx failed: ${JSON.stringify(info)}`);
+      });
+  };
+  return (
+    <>
+      <p className="font-mono text-sm">{address ? `smart account ${address} (gas sponsored)` : err ? `smart account error: ${err}` : "setting up smart account"}</p>
+      {kernel && <button className="border rounded px-3 py-2 w-fit" onClick={ping}>sponsored 0 MON to my smart account</button>}
+      {out && <p className="font-mono text-xs break-all">{out}</p>}
+    </>
+  );
+}
 
 const monad = createPublicClient({ transport: http("https://testnet-rpc.monad.xyz") });
 type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
@@ -99,11 +122,7 @@ function Account() {
       {evm ? (
         <>
           <p className="font-mono text-sm">wallet {evm.address}</p>
-          <p className="font-mono text-sm">
-            {accounts.find((a) => isSmartAccount(a))
-              ? `smart account ${accounts.find((a) => isSmartAccount(a))!.address} (gas sponsored)`
-              : "no smart account yet (gas paid by the wallet)"}
-          </p>
+          <SmartAccountLine />
           <button className="border rounded px-3 py-2 w-fit" onClick={check}>check MON balance</button>
           {balance !== undefined && <p>{balance} MON on monad testnet</p>}
           <button className="border rounded px-3 py-2 w-fit" onClick={sign}>sign a message</button>
