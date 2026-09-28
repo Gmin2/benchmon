@@ -18,7 +18,11 @@ export function useWallet() {
     if (!evm || building.current === evm.address) return;
     building.current = evm.address;
     createWalletClientForWalletAccount({ walletAccount: evm as never })
-      .then(smartWalletFor)
+      .then((w) => {
+        // debug handle for signer checks from the console, dev only
+        if (import.meta.env.DEV) (window as unknown as { __bmSigner: unknown }).__bmSigner = w;
+        return smartWalletFor(w);
+      })
       .then(setKernel)
       .catch((e: Error) => {
         building.current = "";

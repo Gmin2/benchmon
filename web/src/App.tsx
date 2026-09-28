@@ -14,7 +14,8 @@ function SmartAccountLine() {
   const [out, setOut] = useState("");
   const ping = () => {
     const t = performance.now();
-    sendSponsored(kernel!, { to: address!, data: "0x", value: 0n })
+    // a smart account calling itself with no data reverts in validation (AA23), so ping a burn address instead
+    sendSponsored(kernel!, { to: "0x000000000000000000000000000000000000dEaD", data: "0x", value: 0n })
       .then((h) => setOut(`sponsored tx ${h} in ${(performance.now() - t).toFixed(0)}ms`))
       .catch((e: Error & { details?: string; url?: string; status?: number; body?: unknown; shortMessage?: string }) => {
         const info = { short: e.shortMessage, details: e.details, status: e.status, url: e.url?.replace(/v3\/[^/]+/, "v3/..."), body: JSON.stringify(e.body ?? "").slice(0, 400) };
@@ -25,7 +26,7 @@ function SmartAccountLine() {
   return (
     <>
       <p className="font-mono text-sm">{address ? `smart account ${address} (gas sponsored)` : err ? `smart account error: ${err}` : "setting up smart account"}</p>
-      {kernel && <button className="border rounded px-3 py-2 w-fit" onClick={ping}>sponsored 0 MON to my smart account</button>}
+      {kernel && <button className="border rounded px-3 py-2 w-fit" onClick={ping}>sponsored 0 MON test transaction</button>}
       {out && <p className="font-mono text-xs break-all">{out}</p>}
     </>
   );
