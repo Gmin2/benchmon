@@ -4,6 +4,7 @@ import { getNetworksData, logout, sendEmailOTP, verifyOTP } from "@dynamic-labs-
 import { createWaasWalletAccounts } from "@dynamic-labs-sdk/client/waas";
 import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
+import { isSmartAccount } from "./smart";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { Game } from "./Game";
 
@@ -98,6 +99,11 @@ function Account() {
       {evm ? (
         <>
           <p className="font-mono text-sm">wallet {evm.address}</p>
+          <p className="font-mono text-sm">
+            {accounts.find((a) => isSmartAccount(a))
+              ? `smart account ${accounts.find((a) => isSmartAccount(a))!.address} (gas sponsored)`
+              : "no smart account yet (gas paid by the wallet)"}
+          </p>
           <button className="border rounded px-3 py-2 w-fit" onClick={check}>check MON balance</button>
           {balance !== undefined && <p>{balance} MON on monad testnet</p>}
           <button className="border rounded px-3 py-2 w-fit" onClick={sign}>sign a message</button>

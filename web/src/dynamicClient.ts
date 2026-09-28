@@ -1,5 +1,6 @@
 import { createDynamicClient } from "@dynamic-labs-sdk/client";
 import { addEvmExtension } from "@dynamic-labs-sdk/evm";
+import { addZerodevExtension } from "@dynamic-labs-sdk/zerodev";
 
 export const MONAD_TESTNET = {
   blockExplorerUrls: ["https://testnet.monadscan.com"],
@@ -21,3 +22,5 @@ export const dynamicClient = createDynamicClient({
 });
 
 addEvmExtension();
+// zerodev smart accounts with a paymaster, so players pay no gas (project set in the dynamic dashboard)
+addZerodevExtension();
