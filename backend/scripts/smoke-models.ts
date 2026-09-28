@@ -1,11 +1,11 @@
 // asks every roster model and the judge one checkable question, prints answer, latency and cost
 import { config } from "../src/config";
 import { chatModel } from "../src/models";
-import { ROSTER } from "../src/roster";
+import roster from "../src/roster.json";
 
 const q = Bun.argv[2] ?? "What is 17 * 23? Reply with the number only.";
 const models = [
-  ...Object.values(ROSTER).map((r) => ({ name: r.name, id: r.openrouter, reasoning: r.reasoning })),
+  ...roster.map((r) => ({ name: r.name, id: r.openrouter, reasoning: r.reasoning })),
   { name: "kimi (judge)", id: "moonshotai/kimi-k3", reasoning: undefined as Record<string, unknown> | undefined },
 ];
 for (const m of models) {

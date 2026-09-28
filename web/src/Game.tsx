@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatEther, keccak256, parseEther, toHex, type Address } from "viem";
 import { duelAbi } from "./abi";
-import { CONTRACTS, GAS, commitHash, loadCards, loadPick, readMatch, recentMatches, savePick, sendPick, type Card, type Match } from "./chain";
+import { CONTRACTS, GAS, pub, commitHash, loadCards, loadPick, readMatch, recentMatches, savePick, sendPick, type Card, type Match } from "./chain";
 import { ARENAS } from "./rules";
 import { useWallet } from "./useWallet";
 
@@ -33,6 +33,7 @@ function CardView({ c, arena, onClick, disabled, selected }: { c: Card; arena?: 
       className={`border rounded p-2 text-left text-xs w-40 disabled:opacity-40 ${selected ? "border-black border-2" : ""}`}
     >
       <div className="font-bold text-sm">{c.name}</div>
+      <div className="text-gray-500">power {power(c)}</div>
       {ARENAS.map((a, i) => (
         <div key={a} className={i === arena ? "font-bold" : ""}>
           {a} {c.stats[i]}
@@ -42,18 +43,28 @@ function CardView({ c, arena, onClick, disabled, selected }: { c: Card; arena?: 
   );
 }
 
+const power = (c: Card) => c.stats.reduce((a, b) => a + b, 0);
+
 function DeckPicker({ cards, onDone, label }: { cards: Card[]; onDone: (deck: number[]) => void; label: string }) {
   const [deck, setDeck] = useState<number[]>([]);
+  const [cap, setCap] = useState<number>();
+  useEffect(() => {
+    pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "deckCap" }).then((c) => setCap(Number(c)));
+  }, []);
   const toggle = (id: number) => setDeck((d) => (d.includes(id) ? d.filter((x) => x !== id) : d.length < 5 ? [...d, id] : d));
+  const total = cards.filter((c) => deck.includes(c.id)).reduce((a, c) => a + power(c), 0);
+  const over = cap !== undefined && total > cap;
   return (
     <div className="flex flex-col gap-3">
-      <p>pick 5 cards ({deck.length}/5)</p>
+      <p>
+        pick 5 cards ({deck.length}/5) · power {total}/{cap ?? "…"} {over && <b>over the cap, swap in a cheaper card</b>}
+      </p>
       <div className="flex flex-wrap gap-2">
         {cards.map((c) => (
           <CardView key={c.id} c={c} selected={deck.includes(c.id)} onClick={() => toggle(c.id)} />
         ))}
       </div>
-      <button className={btn} disabled={deck.length !== 5} onClick={() => onDone(deck)}>
+      <button className={btn} disabled={deck.length !== 5 || over} onClick={() => onDone(deck)}>
         {label}
       </button>
     </div>

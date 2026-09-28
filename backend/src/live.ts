@@ -5,12 +5,12 @@ import { config } from "./config";
 import { runDuel } from "./duel";
 import { chatModel, type Model } from "./models";
 import { POOL_HASH } from "./prompts";
-import { ROSTER } from "./roster";
+import roster from "./roster.json";
 import { settle } from "./settle";
 import type { LiveDuel } from "./watcher";
 
 function fighter(card: number): Model {
-  const r = ROSTER[card];
+  const r = roster.find((x) => x.id === card);
   if (!r) throw new Error(`card ${card} has no model`);
   return chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: r.openrouter, name: r.name, reasoning: r.reasoning });
 }

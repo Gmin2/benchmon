@@ -22,6 +22,12 @@ const server = Bun.serve({
       const err = await addPick(p);
       return Response.json(err ? { ok: false, error: err } : { ok: true }, { status: err ? 400 : 200, headers: cors });
     }
+    // the card stats the chainlink workflow reads, built by scripts/stats.ts
+    if (url.pathname === "/stats") {
+      const f = Bun.file(new URL("../data/stats.json", import.meta.url).pathname);
+      if (!(await f.exists())) return Response.json({ error: "no stats built yet" }, { status: 404, headers: cors });
+      return new Response(f, { headers: { ...cors, "content-type": "application/json" } });
+    }
     if (url.pathname === "/health") {
       const [block, matches, onchainJudge] = await Promise.all([
         pub.getBlockNumber(),

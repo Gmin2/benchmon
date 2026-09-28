@@ -1,0 +1,362 @@
+{
+  "builtAt": "2026-09-28T01:29:39.229Z",
+  "sources": {
+    "arena": {
+      "dataset": "lmarena-ai/leaderboard-dataset (cc-by-4.0)",
+      "published": "2026-09-25",
+      "code": "text_style_control coding",
+      "math": "text_style_control math",
+      "reasoning": "text_style_control hard_prompts"
+    },
+    "honesty": {
+      "dataset": "lmarena-ai/leaderboard-dataset text_factuality overall",
+      "published": "2026-09-25"
+    },
+    "cost": "openrouter /api/v1/models, usd per million tokens, 3 input to 1 output",
+    "speed": "measured by benchmon on openrouter, median of 5 runs, 2026-09-28T01:29:24.502Z"
+  },
+  "estimated": [
+    "claude-opus-5.5 math from claude-opus-4-6-high",
+    "claude-opus-5.5 honesty from claude-opus-4-6-high"
+  ],
+  "statOrder": [
+    "code",
+    "math",
+    "reasoning",
+    "speed",
+    "cost",
+    "honesty"
+  ],
+  "cards": [
+    {
+      "id": 0,
+      "name": "claude-opus-5.5",
+      "lab": "anthropic",
+      "stats": [
+        92,
+        85,
+        99,
+        8,
+        15,
+        99
+      ],
+      "power": 398,
+      "raw": {
+        "code": 1547.1280940304046,
+        "math": 1516.7158716948097,
+        "reasoning": 1541.2616441613704,
+        "speed": 51.73441142627325,
+        "cost": 8.000000000000002,
+        "honesty": 1493.8642401120164
+      }
+    },
+    {
+      "id": 1,
+      "name": "deepseek-v4.1-flash",
+      "lab": "deepseek",
+      "stats": [
+        64,
+        78,
+        43,
+        64,
+        99,
+        57
+      ],
+      "power": 405,
+      "raw": {
+        "code": 1532.1779817466706,
+        "math": 1509.3869624489676,
+        "reasoning": 1501.0988880082937,
+        "speed": 141.54407864559002,
+        "cost": 0.1723125,
+        "honesty": 1470.919273858742
+      }
+    },
+    {
+      "id": 2,
+      "name": "gemini-3.8-flash",
+      "lab": "google",
+      "stats": [
+        57,
+        92,
+        78,
+        1,
+        64,
+        78
+      ],
+      "power": 370,
+      "raw": {
+        "code": 1532.1317766071393,
+        "math": 1522.1888339526784,
+        "reasoning": 1515.8048534413463,
+        "speed": 36.34608179918696,
+        "cost": 1.5,
+        "honesty": 1477.2752533479702
+      }
+    },
+    {
+      "id": 3,
+      "name": "hy3",
+      "lab": "tencent",
+      "stats": [
+        22,
+        29,
+        22,
+        22,
+        92,
+        15
+      ],
+      "power": 202,
+      "raw": {
+        "code": 1500.8681943379117,
+        "math": 1482.146841033085,
+        "reasoning": 1476.2013429275496,
+        "speed": 80.10261259603386,
+        "cost": 0.23099999999999998,
+        "honesty": 1446.9653201119618
+      }
+    },
+    {
+      "id": 4,
+      "name": "gpt-5.6-luna",
+      "lab": "openai",
+      "stats": [
+        15,
+        22,
+        15,
+        57,
+        85,
+        29
+      ],
+      "power": 223,
+      "raw": {
+        "code": 1500.6513727849715,
+        "math": 1474.057758081251,
+        "reasoning": 1475.0573534825508,
+        "speed": 128.93440193688022,
+        "cost": 0.44999999999999996,
+        "honesty": 1461.2568268924197
+      }
+    },
+    {
+      "id": 5,
+      "name": "claude-fable-5",
+      "lab": "anthropic",
+      "stats": [
+        99,
+        99,
+        92,
+        15,
+        5,
+        92
+      ],
+      "power": 402,
+      "raw": {
+        "code": 1550.7364235865166,
+        "math": 1523.3383900363433,
+        "reasoning": 1530.34976809966,
+        "speed": 61.139400118981165,
+        "cost": 20,
+        "honesty": 1483.4407194553664
+      }
+    },
+    {
+      "id": 6,
+      "name": "kimi-k3",
+      "lab": "moonshot",
+      "stats": [
+        71,
+        71,
+        85,
+        85,
+        22,
+        64
+      ],
+      "power": 398,
+      "raw": {
+        "code": 1540.5443954311356,
+        "math": 1499.1533280039498,
+        "reasoning": 1516.598287591985,
+        "speed": 282.15701990827506,
+        "cost": 6,
+        "honesty": 1472.1147634853598
+      }
+    },
+    {
+      "id": 7,
+      "name": "gpt-6-astra",
+      "lab": "openai",
+      "stats": [
+        78,
+        36,
+        50,
+        43,
+        5,
+        36
+      ],
+      "power": 248,
+      "raw": {
+        "code": 1542.311866429462,
+        "math": 1485.5719594175862,
+        "reasoning": 1502.1347016353584,
+        "speed": 108.31330602526292,
+        "cost": 20,
+        "honesty": 1464.8575261195722
+      }
+    },
+    {
+      "id": 8,
+      "name": "glm-5.3",
+      "lab": "zai",
+      "stats": [
+        43,
+        64,
+        64,
+        78,
+        50,
+        43
+      ],
+      "power": 342,
+      "raw": {
+        "code": 1522.0424272838168,
+        "math": 1497.306897449544,
+        "reasoning": 1506.0206986827138,
+        "speed": 263.426520464945,
+        "cost": 2.15,
+        "honesty": 1467.9790214960315
+      }
+    },
+    {
+      "id": 9,
+      "name": "qwen3.8-max",
+      "lab": "alibaba",
+      "stats": [
+        36,
+        57,
+        36,
+        29,
+        40,
+        50
+      ],
+      "power": 248,
+      "raw": {
+        "code": 1520.4273956904692,
+        "math": 1495.2340355796125,
+        "reasoning": 1500.6026302623059,
+        "speed": 86.91091452407802,
+        "cost": 3,
+        "honesty": 1470.8169108120069
+      }
+    },
+    {
+      "id": 10,
+      "name": "grok-4.20",
+      "lab": "xai",
+      "stats": [
+        29,
+        15,
+        29,
+        99,
+        57,
+        22
+      ],
+      "power": 251,
+      "raw": {
+        "code": 1510.2950367984515,
+        "math": 1465.3734109493319,
+        "reasoning": 1488.3744562266456,
+        "speed": 1475.3791134703988,
+        "cost": 1.5625000000000002,
+        "honesty": 1455.5748357276882
+      }
+    },
+    {
+      "id": 11,
+      "name": "gpt-5.6-sol",
+      "lab": "openai",
+      "stats": [
+        50,
+        50,
+        71,
+        50,
+        29,
+        71
+      ],
+      "power": 321,
+      "raw": {
+        "code": 1530.6867616670502,
+        "math": 1494.2828882257327,
+        "reasoning": 1509.0706805477598,
+        "speed": 119.64465530633328,
+        "cost": 4.000000000000001,
+        "honesty": 1475.634248862726
+      }
+    },
+    {
+      "id": 12,
+      "name": "mimo-v2.6-pro",
+      "lab": "xiaomi",
+      "stats": [
+        85,
+        43,
+        57,
+        36,
+        71,
+        85
+      ],
+      "power": 377,
+      "raw": {
+        "code": 1542.910229634218,
+        "math": 1486.9783449978115,
+        "reasoning": 1504.4373774043447,
+        "speed": 104.52340316525239,
+        "cost": 0.54375,
+        "honesty": 1482.7289472012078
+      }
+    },
+    {
+      "id": 13,
+      "name": "minimax-m3",
+      "lab": "minimax",
+      "stats": [
+        8,
+        8,
+        8,
+        71,
+        78,
+        8
+      ],
+      "power": 181,
+      "raw": {
+        "code": 1495.080486886078,
+        "math": 1433.2128136602448,
+        "reasoning": 1462.8541250878002,
+        "speed": 212.4031369538403,
+        "cost": 0.5249999999999999,
+        "honesty": 1434.2473410856533
+      }
+    },
+    {
+      "id": 14,
+      "name": "mistral-medium-3.5",
+      "lab": "mistral",
+      "stats": [
+        1,
+        1,
+        1,
+        92,
+        40,
+        1
+      ],
+      "power": 136,
+      "raw": {
+        "code": 1477.8975606965073,
+        "math": 1428.6064022303276,
+        "reasoning": 1444.6770781878063,
+        "speed": 326.03790907976173,
+        "cost": 3,
+        "honesty": 1430.1171433127631
+      }
+    }
+  ]
+}

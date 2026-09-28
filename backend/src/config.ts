@@ -8,7 +8,8 @@ function need(name: string): string {
 
 // addresses of the current testnet set, see contracts/README.md
 export const config = {
-  rpcUrl: process.env.RPC_URL ?? "https://testnet-rpc.monad.xyz",
+  // alchemy when a key is set, the public rpc caps a client at 15 requests a second
+  rpcUrl: process.env.ALCHEMY_RPC ?? (process.env.VITE_ALCHEMY_API_KEY ? `https://monad-testnet.g.alchemy.com/v2/${process.env.VITE_ALCHEMY_API_KEY}` : (process.env.RPC_URL ?? "https://testnet-rpc.monad.xyz")),
   port: Number(process.env.PORT ?? 8788),
   judgeKey: need("JUDGE_KEY") as Hex,
   // fighters go through openrouter; kimi is the judge through moonshot directly (kimi bounty)

@@ -1,4 +1,4 @@
-// measures output speed for every roster model: 3 calls on the same prompt, median completion tokens per second.
+// measures output speed for every roster model: 5 calls on the same prompt, median completion tokens per second.
 // writes data/speed.json. usage: bun --env-file=../.env --env-file=.env scripts/measure-speed.ts
 import { config } from "../src/config";
 import roster from "../src/roster.json";
@@ -22,7 +22,7 @@ const out: Record<number, { tps: number; runs: number[] }> = {};
 let spend = 0;
 for (const r of roster) {
   const runs = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     try {
       const x = await once(r.openrouter, r.reasoning);
       spend += x.cost;

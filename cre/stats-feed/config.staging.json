@@ -2,6 +2,6 @@
   "schedule": "0 */6 * * *",
   "chain": "monad-testnet",
   "feed": "0xB1A2Dc3fC1f20CA0e56Cc016fcc863133196D3d7",
-  "gasLimit": "400000",
-  "cards": [{ "id": 4, "stats": [73, 74, 65, 87, 90, 58] }]
+  "gasLimit": "3000000",
+  "statsUrl": "http://localhost:8788/stats"
 }

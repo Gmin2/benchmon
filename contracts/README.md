@@ -62,3 +62,9 @@ match 1, played from the web app by two dynamic test users: player a committed a
 ### gas sponsored play (sept 28 2026, alchemy gas manager, policy on monad testnet)
 
 players play from alchemy smart accounts owned by their dynamic wallets. match 2: player a smart account `0x2cbeb255BDe6Fa9f24a25dD4B366D50773798025`, player b `0xb75Be90deF22EceA251331EFAa0B9f8B9C233059`. both were funded with 0.05 MON; after create, join and both commits (all sponsored user operations) each held exactly 0.04 MON, the 0.01 stake and nothing for gas. the backend relay revealed both picks (`0x444bc90f...`, `0xfa517744...`), round won by b (claude-opus honesty 90 vs deepseek 60).
+
+### real card stats through chainlink (sept 28 2026)
+
+15 real models (roster in `backend/src/roster.json`). `backend/scripts/stats.ts` builds `backend/data/stats.json` from the arena leaderboard dataset (text_style_control coding, math, hard_prompts and text_factuality, published 2026-09-25), openrouter prices, and speed measured by benchmon (5 runs per model, `data/speed.json`). claude-opus-5.5 math and honesty are estimated from claude-opus-4.6 until arena scores it; llama was replaced by tencent hy3 because arena has no llama factuality score.
+
+the owner named the 15 cards with neutral stats (all 50) and set the deck cap to 1600, then `cre workflow simulate stats-feed --broadcast` fetched `/stats` from the backend, reached identical consensus on the payload, and wrote all 15 cards through chainlink's forwarder in tx `0x11f292858f336f0cd51fb390f86c2b00e246331c368c2461315fc21cfe90da82`. `backend/scripts/check-onchain-stats.ts`: 15/15 cards match stats.json.

@@ -2,8 +2,11 @@ import { createPublicClient, encodeAbiParameters, http, keccak256, type Address,
 import { cardStatsAbi, duelAbi } from "./abi";
 import type { Stats } from "./rules";
 
-export const RPC = "https://testnet-rpc.monad.xyz";
-// batch calls into one json-rpc request; the public rpc allows about 50 requests a second
+// alchemy first: the public monad rpc caps a client at 15 requests a second
+export const RPC = import.meta.env.VITE_ALCHEMY_API_KEY
+  ? `https://monad-testnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY}`
+  : "https://testnet-rpc.monad.xyz";
+// batch calls into one json-rpc request
 export const pub = createPublicClient({ transport: http(RPC, { batch: { wait: 30 } }) });
 
 // current testnet set, see contracts/README.md
@@ -17,17 +20,21 @@ export const GAS = { create: 350_000n, join: 450_000n, commit: 100_000n, reveal:
 
 export type Card = { id: number; name: string; stats: Stats };
 
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11" as Address;
+
+// one multicall for the whole roster instead of two reads per card, the public rpc rate limits bursts
 export async function loadCards(): Promise<Card[]> {
   const n = Number(await pub.readContract({ address: CONTRACTS.cards, abi: cardStatsAbi, functionName: "cardCount" }));
-  return Promise.all(
-    Array.from({ length: n }, async (_, id) => {
-      const [name, stats] = await Promise.all([
-        pub.readContract({ address: CONTRACTS.cards, abi: cardStatsAbi, functionName: "names", args: [BigInt(id)] }),
-        pub.readContract({ address: CONTRACTS.cards, abi: cardStatsAbi, functionName: "statsOf", args: [BigInt(id)] }),
-      ]);
-      return { id, name, stats: stats as unknown as Stats };
-    }),
-  );
+  const ids = Array.from({ length: n }, (_, i) => BigInt(i));
+  const res = await pub.multicall({
+    multicallAddress: MULTICALL3,
+    allowFailure: false,
+    contracts: ids.flatMap((id) => [
+      { address: CONTRACTS.cards, abi: cardStatsAbi, functionName: "names", args: [id] } as const,
+      { address: CONTRACTS.cards, abi: cardStatsAbi, functionName: "statsOf", args: [id] } as const,
+    ]),
+  });
+  return ids.map((id, i) => ({ id: Number(id), name: res[2 * i] as string, stats: res[2 * i + 1] as unknown as Stats }));
 }
 
 export const readMatch = (id: bigint) => pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
