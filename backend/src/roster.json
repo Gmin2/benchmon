@@ -1,0 +1,156 @@
+[
+  {
+    "id": 0,
+    "name": "claude-opus-5.5",
+    "lab": "anthropic",
+    "arena": "claude-opus-5.5-high",
+    "openrouter": "anthropic/claude-opus-5.5",
+    "reasoning": {
+      "effort": "low"
+    },
+    "fallbacks": {
+      "math": "claude-opus-4-6-high",
+      "honesty": "claude-opus-4-6-high"
+    }
+  },
+  {
+    "id": 1,
+    "name": "deepseek-v4.1-flash",
+    "lab": "deepseek",
+    "arena": "deepseek-v4.1-flash-max",
+    "openrouter": "deepseek/deepseek-v4.1-flash",
+    "reasoning": {
+      "enabled": false
+    }
+  },
+  {
+    "id": 2,
+    "name": "gemini-3.8-flash",
+    "lab": "google",
+    "arena": "gemini-3.8-flash-high",
+    "openrouter": "google/gemini-3.8-flash",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 3,
+    "name": "hy3",
+    "lab": "tencent",
+    "arena": "hy3",
+    "openrouter": "tencent/hy3",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 4,
+    "name": "gpt-5.6-luna",
+    "lab": "openai",
+    "arena": "gpt-5.6-luna-xhigh",
+    "openrouter": "openai/gpt-5.6-luna",
+    "reasoning": {
+      "enabled": false
+    }
+  },
+  {
+    "id": 5,
+    "name": "claude-fable-5",
+    "lab": "anthropic",
+    "arena": "claude-fable-5-high",
+    "openrouter": "anthropic/claude-fable-5",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 6,
+    "name": "kimi-k3",
+    "lab": "moonshot",
+    "arena": "kimi-k3-max",
+    "openrouter": "moonshotai/kimi-k3",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 7,
+    "name": "gpt-6-astra",
+    "lab": "openai",
+    "arena": "gpt-6-astra-max",
+    "openrouter": "openai/gpt-6-astra",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 8,
+    "name": "glm-5.3",
+    "lab": "zai",
+    "arena": "glm-5.3-max",
+    "openrouter": "z-ai/glm-5.3",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 9,
+    "name": "qwen3.8-max",
+    "lab": "alibaba",
+    "arena": "qwen3.8-max",
+    "openrouter": "qwen/qwen3.8-max-0902",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 10,
+    "name": "grok-4.20",
+    "lab": "xai",
+    "arena": "grok-4.20-beta-0309-reasoning",
+    "openrouter": "x-ai/grok-4.20",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 11,
+    "name": "muse-spark-1.3",
+    "lab": "meta",
+    "arena": "muse-spark-1.3-max",
+    "openrouter": "meta/muse-spark-1.3",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 12,
+    "name": "mimo-v2.6-pro",
+    "lab": "xiaomi",
+    "arena": "mimo-v2.6-pro",
+    "openrouter": "xiaomi/mimo-v2.6-pro",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 13,
+    "name": "minimax-m3",
+    "lab": "minimax",
+    "arena": "minimax-m3",
+    "openrouter": "minimax/minimax-m3",
+    "reasoning": {
+      "effort": "low"
+    }
+  },
+  {
+    "id": 14,
+    "name": "mistral-medium-3.5",
+    "lab": "mistral",
+    "arena": "mistral-medium-3.5",
+    "openrouter": "mistralai/mistral-medium-3-5",
+    "reasoning": {
+      "enabled": false
+    }
+  }
+]
