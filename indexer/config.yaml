@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: benchmon
+description: matches, rounds, players and cards of benchmon on monad testnet
+
+contracts:
+  - name: Duel
+    abi_file_path: ./abis/Duel.json
+    handler: ./src/handlers.ts
+    events:
+      - event: "Created(uint256 indexed id, address indexed a, uint256 stake)"
+      - event: "Joined(uint256 indexed id, address indexed b, uint8 arena)"
+      - event: "Revealed(uint256 indexed id, address indexed player, uint8 round, uint16 card)"
+      - event: "RoundWon(uint256 indexed id, uint8 round, address winner, uint8 nextArena)"
+      - event: "LiveDuel(uint256 indexed id, uint16 cardA, uint16 cardB, uint8 arena)"
+      - event: "Verdict(uint256 indexed id, uint8 outcome, bytes32 duelHash, bool byJudge)"
+      - event: "Finished(uint256 indexed id, address winner, uint256 payout)"
+      - event: "Cancelled(uint256 indexed id)"
+  - name: CardStats
+    abi_file_path: ./abis/CardStats.json
+    handler: ./src/handlers.ts
+    events:
+      - event: "CardSet(uint256 indexed id, uint64 version, string name, uint8[6] stats)"
+  - name: Backing
+    abi_file_path: ./abis/Backing.json
+    handler: ./src/handlers.ts
+    events:
+      - event: "Backed(uint256 indexed id, address indexed who, uint8 side, uint256 amount)"
+  - name: MatchMarket
+    abi_file_path: ./abis/MatchMarket.json
+    handler: ./src/handlers.ts
+    events:
+      - event: "Traded(uint256 indexed id, address indexed who, uint8 side, int256 shares, int256 cost, uint256 priceA)"
+
+chains:
+  - id: 10143
+    start_block: 66260790
+    # alchemy rpc for now; hypersync needs an envio api token
+    rpc:
+      - url: ${ALCHEMY_MONAD_RPC}
+        for: sync
+    contracts:
+      - name: Duel
+        address: "0x1B9E807c7e738779998e943879132CA03B603ccb"
+      - name: CardStats
+        address: "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb"
+      - name: Backing
+        address: "0x6807C5681B77A28CF1E177f6C4518A9730771238"
+      - name: MatchMarket
+        address: "0xC3cd445e804FEC26d873D736eA284F33dB275dC8"

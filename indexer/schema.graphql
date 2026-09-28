@@ -1,0 +1,82 @@
+# one row per match, updated as it moves from open to done
+type Match {
+  id: ID!
+  a: String!
+  b: String
+  stake: BigInt!
+  state: String!
+  arena: Int
+  winsA: Int!
+  winsB: Int!
+  result: String
+  winner: String
+  payout: BigInt
+  liveDuelHash: String
+  liveVerdictByJudge: Boolean
+  backedA: BigInt!
+  backedB: BigInt!
+  marketTrades: Int!
+  lastPriceA: BigInt
+  createdAt: Int!
+  finishedAt: Int
+  rounds: [Round!]! @derivedFrom(field: "match")
+}
+
+type Round {
+  id: ID!
+  match: Match!
+  round: Int!
+  arena: Int!
+  cardA: Int
+  cardB: Int
+  winner: String
+  live: Boolean!
+}
+
+# leaderboard row per player address
+type Player {
+  id: ID!
+  matches: Int!
+  wins: Int!
+  losses: Int!
+  draws: Int!
+  staked: BigInt!
+  won: BigInt!
+  roundsWon: Int!
+}
+
+# how each model card does in play, plus its current stats
+type Card {
+  id: ID!
+  name: String!
+  stats: [Int!]!
+  version: BigInt!
+  plays: Int!
+  roundWins: Int!
+  roundLosses: Int!
+  roundDraws: Int!
+  liveDuels: Int!
+  liveDuelWins: Int!
+  history: [CardUpdate!]! @derivedFrom(field: "card")
+}
+
+# every stats change, so the ui can show how a card evolved
+type CardUpdate {
+  id: ID!
+  card: Card!
+  version: BigInt!
+  stats: [Int!]!
+  timestamp: Int!
+  txHash: String!
+}
+
+type Trade {
+  id: ID!
+  matchId: String!
+  trader: String!
+  side: Int!
+  shares: BigInt!
+  cost: BigInt!
+  priceA: BigInt!
+  timestamp: Int!
+}
