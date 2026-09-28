@@ -58,3 +58,7 @@ note: the simulator fills metadata with placeholders (workflow id `0x11..11`, ow
 | StatsFeed | `0xB1A2Dc3fC1f20CA0e56Cc016fcc863133196D3d7` (workflow check set to the simulator's placeholder owner and id) |
 
 match 1, played from the web app by two dynamic test users: player a committed and left the tab in the background, player b committed at block 66262014, the backend relay revealed a at 66262017 (`0x113228b6...`) and b at 66262021, round won by a. the earlier sets above are retired.
+
+### gas sponsored play (sept 28 2026, alchemy gas manager, policy on monad testnet)
+
+players play from alchemy smart accounts owned by their dynamic wallets. match 2: player a smart account `0x2cbeb255BDe6Fa9f24a25dD4B366D50773798025`, player b `0xb75Be90deF22EceA251331EFAa0B9f8B9C233059`. both were funded with 0.05 MON; after create, join and both commits (all sponsored user operations) each held exactly 0.04 MON, the 0.01 stake and nothing for gas. the backend relay revealed both picks (`0x444bc90f...`, `0xfa517744...`), round won by b (claude-opus honesty 90 vs deepseek 60).
