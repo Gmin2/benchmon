@@ -3,6 +3,7 @@ import { DECK_CAP, LIVE_MATCHES, ME, OPEN_MATCHES, PLAYERS, avatarOf, byId, byNa
 import { ARENAS } from "../rules";
 import { GameCard } from "../ui/Card";
 import { Ico, type IcoName } from "../ui/kit";
+import { RailIcon } from "../ui/railIcons";
 import { artOf, infoOf, tierOf } from "../ui/meta";
 import { loadDecks } from "./Decks";
 
@@ -54,7 +55,7 @@ function Hero({ go }: { go: Go }) {
           </h2>
           <div className="flex flex-wrap items-center gap-3">
             <button onClick={() => go("play")} className="flex h-16 items-center gap-3 rounded-full bg-neon px-9 text-lg font-extrabold text-bg uppercase shadow-[0_12px_40px_-10px_rgba(184,255,61,.7)] transition hover:bg-neon-hi active:scale-[.98]">
-              <Ico name="gamepad" className="h-6 w-6" />
+              <RailIcon name="play" className="h-7 w-7" cutColor="#b8ff3d" />
               Quick match
             </button>
             <button onClick={() => go("decks")} className="h-16 rounded-full border-2 border-neon/70 px-8 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10">

@@ -4,7 +4,8 @@ import { Game } from "../Game";
 import { useWallet } from "../useWallet";
 import { DEV, SEAT, devUrl } from "../dev";
 import { short, useBalance } from "../hooks";
-import { Ico, Panel, type IcoName } from "../ui/kit";
+import { Ico, Panel } from "../ui/kit";
+import { RailIcon, type RailIconName } from "../ui/railIcons";
 import { Trade } from "./Trade";
 import { Home } from "./Home";
 import { Decks } from "./Decks";
@@ -13,12 +14,12 @@ import { Ranks } from "./Ranks";
 import type { Deck } from "../mock";
 
 export type Tab = "home" | "decks" | "play" | "trade" | "ranks" | "onchain";
-const NAV: { id: Tab; label: string; icon: IcoName }[] = [
-  { id: "home", label: "Home", icon: "house-6" },
-  { id: "decks", label: "Decks", icon: "layers" },
-  { id: "play", label: "Play", icon: "gamepad" },
-  { id: "trade", label: "Trade", icon: "square-activity-chart" },
-  { id: "ranks", label: "Ranks", icon: "star-2" },
+const NAV: { id: Tab; label: string; icon: RailIconName }[] = [
+  { id: "home", label: "Home", icon: "home" },
+  { id: "decks", label: "Decks", icon: "decks" },
+  { id: "play", label: "Play", icon: "play" },
+  { id: "trade", label: "Trade", icon: "trade" },
+  { id: "ranks", label: "Ranks", icon: "ranks" },
 ];
 
 function readTab(): Tab {
@@ -42,21 +43,22 @@ function Rail({ tab, go }: { tab: Tab; go: (t: Tab) => void }) {
       <button onClick={() => go("home")} aria-label="benchmon home">
         <Logo />
       </button>
-      <nav className="mt-14 flex flex-1 flex-col gap-3">
+      <nav className="mt-12 flex flex-1 flex-col gap-2">
         {NAV.map((n) => {
           const on = n.id === tab;
           return (
-            <button key={n.id} onClick={() => go(n.id)} title={n.label} aria-label={n.label} className="group relative grid h-14 w-[92px] place-items-center">
-              {on && <span className="absolute top-2 right-0 bottom-2 w-1.5 rounded-l-full bg-neon" />}
-              <span className={`grid h-12 w-12 place-items-center rounded-2xl transition ${on ? "bg-panel-2 text-ink" : "text-dim group-hover:text-mute"}`}>
-                <Ico name={n.icon} className="h-[22px] w-[22px]" />
+            <button key={n.id} onClick={() => go(n.id)} title={n.label} aria-label={n.label} className="group relative flex w-[92px] flex-col items-center gap-1 py-1">
+              {on && <span className="absolute top-2 right-0 h-10 w-1.5 rounded-l-full bg-neon" />}
+              <span className={`grid h-[52px] w-[52px] place-items-center rounded-[18px] transition duration-200 ${on ? "bg-neon text-bg shadow-[0_8px_24px_-8px_rgba(184,255,61,.7)]" : "bg-transparent text-[#6b6d75] group-hover:-translate-y-0.5 group-hover:bg-panel group-hover:text-ink"}`}>
+                <RailIcon name={n.icon} className="h-[26px] w-[26px]" cutColor={on ? "#b8ff3d" : "#16171a"} />
               </span>
+              <span className={`text-[11px] font-semibold ${on ? "text-ink" : "text-dim group-hover:text-mute"}`}>{n.label}</span>
             </button>
           );
         })}
       </nav>
-      <button className="grid h-12 w-12 place-items-center rounded-2xl text-dim hover:text-mute" aria-label="settings" title="settings">
-        <Ico name="gear-3" className="h-[22px] w-[22px]" />
+      <button className="group grid h-[52px] w-[52px] place-items-center rounded-[18px] text-dim transition hover:rotate-45 hover:bg-panel hover:text-mute" aria-label="settings" title="settings">
+        <RailIcon name="settings" className="h-[24px] w-[24px]" />
       </button>
     </aside>
   );
@@ -165,7 +167,7 @@ export function Shell() {
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-line bg-app/95 py-2 backdrop-blur md:hidden">
         {NAV.map((n) => (
           <button key={n.id} onClick={() => go(n.id)} className={`flex flex-col items-center gap-1 px-2 text-[11px] ${n.id === tab ? "text-neon" : "text-dim"}`}>
-            <Ico name={n.icon} className="h-5 w-5" />
+            <RailIcon name={n.icon} className="h-6 w-6" cutColor="#16171a" />
             {n.label}
           </button>
         ))}
