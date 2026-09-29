@@ -122,9 +122,9 @@ function render() {
       </tbody></table>`
   } else if (view === "players") {
     const ranks = ["rookie", "trainer", "ace", "champion"]
-    app.innerHTML = `<p class="note">players are creature trainers, seeded from their wallet address, so every wallet gets its own species, outfit and colours. rank climbs with wins: trainer adds pack and scarf, ace a jacket and gloves, champion a crown, cape, epaulets and gold aura.</p>
+    app.innerHTML = `<p class="note">players pick a class at signup, then a body, hair, skin and their own colour. the class icon sits by the head. rank climbs with wins: trainer adds a scarf, ace silver epaulets, champion gold epaulets, a cape, gold class headwear (or a crown) and a gold aura.</p>
       <table><thead><tr><th></th>${ranks.map(r => `<th>${r}</th>`).join("")}</tr></thead><tbody>
-      ${D.players.map(p => `<tr><th class="row">${p.address.slice(0, 10)}<br>${p.species}</th>${ranks.map(r => `<td>${pic(`lpc/out/players/${p.address.slice(0, 10)}-${r}${b}@8x.png`, `pl/${p.address.slice(0, 10)}-${r}`, `${p.species} ${r}`)}</td>`).join("")}</tr>`).join("")}
+      ${(D.classes || []).flatMap(c => c.looks.map((l, i) => `<tr><th class="row">${i ? "" : `<b>${c.title}</b><br>${c.blurb}<br>`}${l.split("-").pop()}</th>${ranks.map(r => `<td>${pic(`lpc/out/classes/${l}-${r}${b}@8x.png`, `cl/${l}-${r}`, `${l} ${r}`)}</td>`).join("")}</tr>`)).join("")}
       </tbody></table>`
   } else if (view === "compare") {
     app.innerHTML = `<p class="note">every row is one card, every column one look. click to zoom, shift+click to star the ones you like.</p>

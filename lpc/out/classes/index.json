@@ -1,0 +1,74 @@
+[
+  {
+    "cls": "researcher",
+    "title": "researcher",
+    "blurb": "runs the evals, trusts the data",
+    "looks": [
+      "researcher-male",
+      "researcher-female"
+    ]
+  },
+  {
+    "cls": "hacker",
+    "title": "hacker",
+    "blurb": "finds the jailbreak first",
+    "looks": [
+      "hacker-male",
+      "hacker-female"
+    ]
+  },
+  {
+    "cls": "trader",
+    "title": "trader",
+    "blurb": "reads the market, backs the winner",
+    "looks": [
+      "trader-male",
+      "trader-female"
+    ]
+  },
+  {
+    "cls": "builder",
+    "title": "builder",
+    "blurb": "ships the agent, fixes it live",
+    "looks": [
+      "builder-male",
+      "builder-female"
+    ]
+  },
+  {
+    "cls": "sage",
+    "title": "sage",
+    "blurb": "whispers the perfect prompt",
+    "looks": [
+      "sage-male",
+      "sage-female"
+    ]
+  },
+  {
+    "cls": "athlete",
+    "title": "athlete",
+    "blurb": "speedruns every benchmark",
+    "looks": [
+      "athlete-male",
+      "athlete-female"
+    ]
+  },
+  {
+    "cls": "scout",
+    "title": "scout",
+    "blurb": "finds new models before launch",
+    "looks": [
+      "scout-male",
+      "scout-female"
+    ]
+  },
+  {
+    "cls": "validator",
+    "title": "validator",
+    "blurb": "guards the chain, checks every move",
+    "looks": [
+      "validator-male",
+      "validator-female"
+    ]
+  }
+]
