@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { logout } from "@dynamic-labs-sdk/client";
 import { Game } from "../Game";
 import { useWallet } from "../useWallet";
+import { DEV, SEAT, devUrl } from "../dev";
 import { Brand, Dock, Panel, PxButton, Ticker, type Tab } from "../ui/layout";
 import { Icon, type IconName } from "../ui/pixel";
 
@@ -26,6 +27,11 @@ function TopBar({ go }: { go: (t: Tab) => void }) {
           matches running on monad testnet
         </Ticker>
         <div className="relative flex items-start gap-3">
+          {DEV && (
+            <span className="flex h-11 items-center gap-1.5 rounded-[4px] border border-primary/30 bg-primary/10 px-2.5 font-mono text-xs text-primary uppercase" title="dev mode, no login, a throwaway player key in this browser">
+              dev · player {SEAT}
+            </span>
+          )}
           <div className="hidden flex-col items-center sm:flex">
             <div className="flex items-center gap-2 rounded-[4px] border-2 border-shade bg-secondary-bg p-1.5 pr-2">
               <div className="grid h-7 w-6 place-items-center rounded-[2px] bg-highlight text-primary">
@@ -46,11 +52,26 @@ function TopBar({ go }: { go: (t: Tab) => void }) {
             <span className="text-subtext">⌄</span>
           </button>
           {open && (
-            <div className="absolute top-12 right-0 w-56 rounded-[4px] border border-line bg-background p-2 font-mono text-sm">
+            <div className="absolute top-12 right-0 w-64 rounded-[4px] border border-line bg-background p-2 font-mono text-sm">
               <div className="px-2 py-1.5 text-xs break-all text-subtext">{address}</div>
-              <button className="w-full cursor-pointer rounded-[3px] px-2 py-2 text-left hover:bg-shade" onClick={() => logout()}>
-                log out
-              </button>
+              {DEV ? (
+                <>
+                  <p className="px-2 py-1.5 text-[11px] leading-4 text-subtext">
+                    stakes need testnet MON. top this player up from the deployer:
+                    <code className="mt-1 block text-main">cd backend && bun --env-file=../.env scripts/fund-dev.ts {address ?? "0x…"}</code>
+                  </p>
+                  <a className="block rounded-[3px] px-2 py-2 hover:bg-shade" href={devUrl(SEAT === "a" ? "b" : "a")} target="_blank" rel="noreferrer">
+                    open player {SEAT === "a" ? "b" : "a"} in a new tab
+                  </a>
+                  <a className="block rounded-[3px] px-2 py-2 hover:bg-shade" href={devUrl(null)}>
+                    leave dev mode
+                  </a>
+                </>
+              ) : (
+                <button className="w-full cursor-pointer rounded-[3px] px-2 py-2 text-left hover:bg-shade" onClick={() => logout()}>
+                  log out
+                </button>
+              )}
             </div>
           )}
         </div>

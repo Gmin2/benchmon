@@ -8,6 +8,7 @@ import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/
 import { Game } from "./Game";
 import { Welcome } from "./screens/Welcome";
 import { Shell } from "./screens/Shell";
+import { DEV } from "./dev";
 import { Crest } from "./ui/brand";
 import { useWallet } from "./useWallet";
 import { sendSponsored } from "./gas";
@@ -115,6 +116,7 @@ function Account() {
 export default function App() {
   const { data: init } = useInitStatus();
   const { data: user } = useUser();
+  if (DEV) return <Shell />;
   if (init !== "finished")
     return (
       <div className="grid h-full place-items-center">
