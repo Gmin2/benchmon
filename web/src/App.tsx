@@ -7,6 +7,7 @@ import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { Game } from "./Game";
 import { Welcome } from "./screens/Welcome";
+import { Shell } from "./screens/Shell";
 import { Crest } from "./ui/brand";
 import { useWallet } from "./useWallet";
 import { sendSponsored } from "./gas";
@@ -116,16 +117,14 @@ export default function App() {
   const { data: user } = useUser();
   if (init !== "finished")
     return (
-      <div className="h-full grid place-items-center">
-        <Crest className="w-12 h-12 animate-pulse" />
+      <div className="grid h-full place-items-center">
+        <Crest className="h-12 w-12 animate-pulse" />
       </div>
     );
-  if (!user) return <Welcome />;
-  // screens after login are next; the working game stays reachable meanwhile
-  return (
-    <main className="p-8 flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">benchmon</h1>
-      <Account />
-    </main>
-  );
+  return user ? <Shell /> : <Welcome />;
+}
+
+// the old debug panel, kept for wallet checks from the console
+export function DebugAccount() {
+  return <Account />;
 }

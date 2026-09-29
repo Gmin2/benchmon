@@ -13,8 +13,3 @@ export function Wordmark({ className = "" }: { className?: string }) {
     </span>
   );
 }
-
-export const pill =
-  "inline-flex items-center justify-center gap-2 rounded-full font-mono uppercase tracking-wide text-sm px-5 py-3 transition active:scale-[.97] disabled:opacity-40 disabled:pointer-events-none select-none";
-export const pillLime = `${pill} bg-lime text-gray-10 hover:brightness-95`;
-export const pillGhost = `${pill} border border-gray-20 bg-gray-10 text-gray-85 hover:bg-gray-15`;

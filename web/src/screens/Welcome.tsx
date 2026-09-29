@@ -2,50 +2,43 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { sendEmailOTP, verifyOTP } from "@dynamic-labs-sdk/client";
 import { loadCards, type Card } from "../chain";
 import { GameCard } from "../ui/Card";
-import { Crest, Wordmark, pillGhost, pillLime } from "../ui/brand";
+import { Brand, Frame, PxButton, Ticker } from "../ui/layout";
 import { infoOf } from "../ui/meta";
 import { Icon, type IconName } from "../ui/pixel";
 
 type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
 
-const STEPS: { icon: IconName; title: string; body: string }[] = [
-  { icon: "power", title: "build a deck of five", body: "every card is a real model with six stats from live benchmarks. strong decks cost power, and a deck has to stay under 1600." },
-  { icon: "lock", title: "lock in, then reveal", body: "each round picks an arena stat. you both lock a card face down, then flip. the higher stat wins, with a type edge for the counter pick." },
-  { icon: "reasoning", title: "the models fight for real", body: "the last round is a live duel. both models answer the same prompt and a judge model picks the winner, posted onchain." },
-];
+const FAN = [-24, -15, -7, 0, 7, 15, 24];
+const HAND = ["mimo-v2.6-pro", "kimi-k3", "claude-opus-5.5", "claude-fable-5", "deepseek-v4.1-flash", "gemini-3.8-flash", "glm-5.3"];
 
-function Hand({ cards }: { cards: Card[] }) {
-  const picks = useMemo(() => {
+function Word({ children, lime, icon }: { children: string; lime?: boolean; icon?: IconName }) {
+  return (
+    <span className={`flex items-center gap-2 px-3 leading-none ${lime ? "bg-primary/85 text-bg" : ""}`}>
+      {icon && <Icon name={icon} className="h-[0.7em] w-[0.7em]" />}
+      {children}
+    </span>
+  );
+}
+
+function Fan({ cards }: { cards: Card[] }) {
+  const hand = useMemo(() => {
     const byName = Object.fromEntries(cards.map((c) => [c.name, c]));
-    return ["kimi-k3", "claude-fable-5", "deepseek-v4.1-flash"].map((n) => byName[n]).filter((c): c is Card => Boolean(c));
+    return HAND.map((n) => byName[n]).filter((c): c is Card => Boolean(c));
   }, [cards]);
   return (
-    <div className="relative aspect-[1/1] max-h-[600px] w-full rounded-[28px] overflow-hidden border border-gray-15 bg-gray-10">
-      <img src="/art/arenas/code@1x.png" alt="" className="pixel absolute inset-0 w-full h-full object-cover opacity-80" />
-      <div className="absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_55%,transparent,rgba(0,0,0,.7))]" />
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-gray-5/80 backdrop-blur px-4 py-2 font-mono text-xs uppercase tracking-widest text-gray-85">
-        <Icon name="code" className="w-4 h-4 text-lime" />
-        arena <b className="text-lime font-bold">code</b>
-      </div>
-      {picks.length === 3 ? (
-        <div className="absolute inset-x-0 bottom-[11%] flex justify-center">
-          {picks.map((c, i) => (
-            <div
-              key={c.id}
-              className="hand-card"
-              style={{ "--i": i - 1, zIndex: i === 1 ? 3 : 1 } as React.CSSProperties}
-            >
-              <GameCard info={infoOf(c)} size="tile" arena="code" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="absolute inset-x-0 bottom-[7%] flex justify-center gap-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="w-[198px] aspect-[5/7.4] rounded-xl bg-gray-15/80 animate-pulse" />
-          ))}
-        </div>
-      )}
+    <div className="relative mt-12 h-[330px] w-full max-w-[820px]">
+      {hand.length === 0
+        ? FAN.map((r, i) => (
+            <div key={i} className="fan-card h-[250px] w-[170px] rounded-[6px] bg-subcolor" style={{ "--x": `${r * 12}px`, "--y": `${Math.abs(r) * 1.3}px`, "--r": `${r}deg`, "--n": i, zIndex: i } as React.CSSProperties} />
+          ))
+        : hand.map((c, i) => {
+            const r = FAN[i]!;
+            return (
+              <div key={c.id} className="fan-card" style={{ "--x": `${r * 12}px`, "--y": `${Math.abs(r) * 1.3}px`, "--r": `${r}deg`, "--n": i, zIndex: i } as React.CSSProperties}>
+                <GameCard info={infoOf(c)} size="tile" />
+              </div>
+            );
+          })}
     </div>
   );
 }
@@ -55,12 +48,11 @@ function CodeBoxes({ value, onChange, disabled }: { value: string; onChange: (v:
   const set = (i: number, ch: string) => {
     const digits = ch.replace(/\D/g, "");
     if (!digits) return;
-    const next = (value.slice(0, i) + digits + value.slice(i + digits.length)).slice(0, 6);
-    onChange(next);
+    onChange((value.slice(0, i) + digits + value.slice(i + digits.length)).slice(0, 6));
     refs.current[Math.min(5, i + digits.length)]?.focus();
   };
   return (
-    <div className="flex gap-2">
+    <div className="flex justify-center gap-2">
       {Array.from({ length: 6 }, (_, i) => (
         <input
           key={i}
@@ -83,7 +75,7 @@ function CodeBoxes({ value, onChange, disabled }: { value: string; onChange: (v:
               refs.current[i - 1]?.focus();
             }
           }}
-          className="w-12 h-14 rounded-xl bg-gray-10 border border-gray-20 text-center font-mono text-xl text-gray-95 outline-none focus:border-lime transition"
+          className="px-corners h-14 w-12 bg-shade text-center font-display text-2xl text-main outline-none focus:bg-highlight"
         />
       ))}
     </div>
@@ -125,48 +117,43 @@ function Login() {
   }, [code]);
 
   return (
-    <div className="w-full max-w-md">
+    <div id="login" className="mt-10 flex w-full max-w-[460px] flex-col items-center gap-4 px-4">
       {!otp ? (
         <form
-          className="flex flex-col gap-3"
+          className="flex w-full flex-col gap-3 sm:flex-row"
           onSubmit={(e) => {
             e.preventDefault();
             if (valid) send();
           }}
         >
-          <label className="font-mono text-xs uppercase tracking-widest text-gray-50" htmlFor="email">
-            start with your email
-          </label>
-          <div className="flex gap-2 rounded-full bg-gray-10 border border-gray-20 p-1.5 focus-within:border-lime transition">
-            <span className="grid place-items-center pl-3 text-gray-50">
-              <Icon name="mail" className="w-4 h-4" />
-            </span>
+          <label className="px-corners flex h-[47px] flex-1 items-center gap-2 bg-shade px-3 focus-within:bg-highlight">
+            <Icon name="mail" className="h-4 w-4 text-subtext" />
             <input
-              id="email"
               type="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder="your email"
+              aria-label="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent outline-none text-gray-95 placeholder:text-gray-50 text-[15px]"
+              className="min-w-0 flex-1 bg-transparent font-mono text-[15px] text-main outline-none placeholder:text-subtext"
             />
-            <button type="submit" className={pillLime} disabled={!valid || busy}>
-              {busy ? "sending" : "send code"}
-            </button>
-          </div>
+          </label>
+          <PxButton type="submit" disabled={!valid || busy}>
+            {busy ? "Sending" : "Start playing"}
+          </PxButton>
         </form>
       ) : (
-        <div className="flex flex-col gap-3">
-          <p className="font-mono text-xs uppercase tracking-widest text-gray-50">
-            we sent a 6 digit code to <span className="text-gray-85 normal-case tracking-normal font-sans text-sm">{email}</span>
+        <>
+          <p className="text-center font-mono text-sm text-subtext">
+            code sent to <span className="text-main">{email}</span>
           </p>
           <CodeBoxes value={code} onChange={setCode} disabled={busy} />
-          <div className="flex gap-2 items-center mt-1">
-            <button className={pillLime} disabled={code.length !== 6 || busy} onClick={verify}>
-              {busy ? "checking" : "enter the arena"}
-            </button>
-            <button
-              className={pillGhost}
+          <div className="flex gap-3">
+            <PxButton disabled={code.length !== 6 || busy} onClick={verify}>
+              {busy ? "Checking" : "Enter the arena"}
+            </PxButton>
+            <PxButton
+              dark
               disabled={busy}
               onClick={() => {
                 setOtp(null);
@@ -174,13 +161,13 @@ function Login() {
                 setErr("");
               }}
             >
-              change email
-            </button>
+              Change email
+            </PxButton>
           </div>
-        </div>
+        </>
       )}
-      <p className="mt-4 text-sm text-gray-50 leading-relaxed">no passwords and nothing to install. your account is ready the moment you log in, and moves cost you nothing.</p>
-      {err && <p className="mt-3 text-sm text-loss">{err}</p>}
+      <p className="text-center font-mono text-xs leading-5 text-subtext">no password and nothing to install. your account is ready the moment you log in, and every move is free.</p>
+      {err && <p className="text-center font-mono text-sm text-error">{err}</p>}
     </div>
   );
 }
@@ -200,60 +187,49 @@ export function Welcome() {
   }, []);
 
   return (
-    <div className="min-h-full flex flex-col">
-      <header className="flex items-center justify-between px-6 md:px-10 py-5">
-        <Wordmark />
-        <span className="flex items-center gap-2 rounded-full border border-gray-20 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-gray-70">
-          <span className="w-1.5 h-1.5 rounded-full bg-lime" />
-          live on monad testnet
-        </span>
-      </header>
+    <div className="relative min-h-svh bg-[radial-gradient(ellipse_at_50%_-10%,#1e2610_0%,#0d0d10_55%)]">
+      <nav className="fixed top-0 left-0 z-50 w-full bg-bg/70 backdrop-blur-sm">
+        <div className="mx-auto flex h-[72px] max-w-[1236px] items-center justify-between px-5">
+          <Brand />
+          <Ticker tag="LIVE" onClick={() => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
+            15 real models on monad testnet
+          </Ticker>
+          <PxButton dark onClick={() => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
+            Log in
+          </PxButton>
+        </div>
+      </nav>
 
-      <main className="flex-1 w-full max-w-[1240px] mx-auto px-6 md:px-10 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center py-8 lg:py-12">
-        <section className="flex flex-col gap-7">
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-lime">pvp card battles · real benchmarks</span>
-          <h1 className="font-wide font-semibold text-[40px] leading-[1.02] md:text-[60px] tracking-[-0.01em]">
-            every card is a<br />
-            real ai model.
-          </h1>
-          <p className="text-gray-70 text-lg leading-relaxed max-w-[34ch]">
-            pick five, stake on your deck and let the numbers fight. when a lab ships a new model, the cards change.
-          </p>
-          <Login />
-        </section>
-        <section>
-          <Hand cards={cards} />
-        </section>
+      <main className="relative flex min-h-svh flex-col items-center overflow-hidden pt-[110px] pb-24">
+        <div className="pixel-field pointer-events-none absolute inset-x-0 bottom-0 h-1/2 [mask-image:linear-gradient(transparent,#000)]" />
+        <h1 className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 px-4 font-display text-[clamp(34px,5.4vw,78px)]">
+          <Word>PICK</Word>
+          <Word lime icon="lock">LOCK</Word>
+          <Word>REVEAL</Word>
+          <Word lime icon="power">WIN</Word>
+        </h1>
+
+        <Fan cards={cards} />
+
+        <Frame className="relative mt-16 text-center text-base leading-6 md:text-[17px]">
+          every card is a real ai model with live benchmark stats.
+          <br />
+          build a deck of five, stake on it and let the numbers fight.
+        </Frame>
+
+        <Login />
       </main>
 
-      <section className="w-full max-w-[1240px] mx-auto px-6 md:px-10 pb-14">
-        <div className="grid md:grid-cols-3 gap-4">
-          {STEPS.map((s, i) => (
-            <div key={s.title} className="rounded-2xl border border-gray-15 bg-gray-10 p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="grid place-items-center w-9 h-9 rounded-full bg-gray-15 text-lime">
-                  <Icon name={s.icon} className="w-4 h-4" />
-                </span>
-                <span className="font-mono text-xs text-gray-50">0{i + 1}</span>
-              </div>
-              <h2 className="font-semibold text-lg">{s.title}</h2>
-              <p className="text-sm text-gray-70 leading-relaxed">{s.body}</p>
-            </div>
-          ))}
+      <footer className="relative border-t border-line px-5 py-5">
+        <div className="mx-auto flex max-w-[1236px] flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-[11px] text-subtext">
+          <span>benchmon · monad metropolis 2026</span>
+          <span>
+            stats: arena (cc-by), openrouter prices · art: lpc artists (cc-by-sa) ·{" "}
+            <a className="underline hover:text-main" href="/art/CREDITS-characters.md" target="_blank" rel="noreferrer">
+              credits
+            </a>
+          </span>
         </div>
-      </section>
-
-      <footer className="border-t border-gray-15 px-6 md:px-10 py-5 flex flex-wrap gap-x-6 gap-y-2 items-center justify-between font-mono text-[11px] uppercase tracking-widest text-gray-50">
-        <span className="flex items-center gap-2">
-          <Crest className="w-4 h-4" />
-          benchmon · monad metropolis 2026
-        </span>
-        <span>
-          stats: arena (cc-by), openrouter prices · art: lpc artists (cc-by-sa),{" "}
-          <a className="underline hover:text-gray-85" href="/art/CREDITS-characters.md" target="_blank" rel="noreferrer">
-            credits
-          </a>
-        </span>
       </footer>
     </div>
   );
