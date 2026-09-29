@@ -1,1 +1,73 @@
 @import "tailwindcss";
+
+@font-face { font-family: "PolySans"; src: url("/fonts/PolySansNeutral_ydvq84-d24292.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "PolySans"; src: url("/fonts/PolySansMedian_g0tsa4-47e394.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "PolySansWide"; src: url("/fonts/PolySansMedianWide_cqzgag-a69f23.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "NB Arkitekt"; src: url("/fonts/nb_architekt_r_regularwebfont_f2xtaz-9b3684.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "NB Arkitekt"; src: url("/fonts/nb_architekt_r_boldwebfont_klo1os-478016.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+@theme {
+  --font-sans: "PolySans", ui-sans-serif, system-ui, sans-serif;
+  --font-wide: "PolySansWide", "PolySans", ui-sans-serif, sans-serif;
+  --font-mono: "NB Arkitekt", ui-monospace, monospace;
+
+  --color-gray-0: hsl(0 0% 0%);
+  --color-gray-5: hsl(0 0% 5%);
+  --color-gray-10: hsl(0 0% 10%);
+  --color-gray-15: hsl(0 0% 15%);
+  --color-gray-20: hsl(0 0% 20%);
+  --color-gray-30: hsl(0 0% 30%);
+  --color-gray-50: hsl(0 0% 50%);
+  --color-gray-70: hsl(0 0% 70%);
+  --color-gray-85: hsl(0 0% 85%);
+  --color-gray-95: hsl(0 0% 95%);
+  --color-lime: hsl(76 87% 67%);
+  --color-lime-dim: hsl(76 60% 40%);
+  --color-loss: hsl(4 80% 62%);
+  --color-gold: #f2c94c;
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --gray-0: var(--color-gray-0);
+  --gray-5: var(--color-gray-5);
+  --gray-10: var(--color-gray-10);
+  --gray-15: var(--color-gray-15);
+  --gray-20: var(--color-gray-20);
+  --gray-30: var(--color-gray-30);
+  --gray-50: var(--color-gray-50);
+  --gray-70: var(--color-gray-70);
+  --gray-85: var(--color-gray-85);
+  --gray-95: var(--color-gray-95);
+  --lime: var(--color-lime);
+  --loss: var(--color-loss);
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--gray-5);
+  color: var(--gray-95);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--lime); color: var(--gray-10); }
+
+.pixel { image-rendering: pixelated; }
+
+/* welcome hand: three cards fanned, the middle one lifted, a slow idle float */
+.hand-card {
+  margin: 0 -46px;
+  transform-origin: 50% 120%;
+  rotate: calc(var(--i) * 9deg);
+  translate: 0 calc(abs(var(--i)) * 18px);
+  animation: hand-float 5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -1.4s);
+  transition: translate .3s var(--ease-out-soft);
+}
+.hand-card:hover { translate: 0 calc(abs(var(--i)) * 18px - 14px); z-index: 5 !important; }
+@keyframes hand-float { 50% { margin-top: -10px; } }
+@media (max-width: 640px) { .hand-card { margin: 0 -56px; } .hand-card .bm-card { font-size: 9px; } }
+@media (prefers-reduced-motion: reduce) { .hand-card { animation: none; } }

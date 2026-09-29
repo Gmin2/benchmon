@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPublicClient, formatEther, http } from "viem";
-import { getNetworksData, logout, sendEmailOTP, verifyOTP } from "@dynamic-labs-sdk/client";
+import { getNetworksData, logout } from "@dynamic-labs-sdk/client";
 import { createWaasWalletAccounts } from "@dynamic-labs-sdk/client/waas";
 import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
 import { useGetWalletAccounts, useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { Game } from "./Game";
+import { Welcome } from "./screens/Welcome";
+import { Crest } from "./ui/brand";
 import { useWallet } from "./useWallet";
 import { sendSponsored } from "./gas";
 
@@ -33,37 +35,6 @@ function SmartAccountLine() {
 }
 
 const monad = createPublicClient({ transport: http("https://testnet-rpc.monad.xyz") });
-type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
-
-function Login() {
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [otp, setOtp] = useState<Otp | null>(null);
-  const [err, setErr] = useState("");
-  const run = (f: () => Promise<unknown>) => f().catch((e: Error) => setErr(e.message));
-
-  return (
-    <div className="flex flex-col gap-3 max-w-sm">
-      {!otp ? (
-        <>
-          <input className="border rounded px-3 py-2" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="bg-black text-white rounded px-3 py-2" onClick={() => run(async () => setOtp(await sendEmailOTP({ email })))}>
-            send code
-          </button>
-        </>
-      ) : (
-        <>
-          <input className="border rounded px-3 py-2" placeholder="6 digit code" value={code} onChange={(e) => setCode(e.target.value)} />
-          <button className="bg-black text-white rounded px-3 py-2" onClick={() => run(() => verifyOTP({ otpVerification: otp, verificationToken: code }))}>
-            log in
-          </button>
-        </>
-      )}
-      {err && <p className="text-red-600 text-sm">{err}</p>}
-    </div>
-  );
-}
-
 function Account() {
   const { data: accounts = [], isFetched } = useGetWalletAccounts();
   const [balance, setBalance] = useState<string>();
@@ -143,10 +114,18 @@ function Account() {
 export default function App() {
   const { data: init } = useInitStatus();
   const { data: user } = useUser();
+  if (init !== "finished")
+    return (
+      <div className="h-full grid place-items-center">
+        <Crest className="w-12 h-12 animate-pulse" />
+      </div>
+    );
+  if (!user) return <Welcome />;
+  // screens after login are next; the working game stays reachable meanwhile
   return (
     <main className="p-8 flex flex-col gap-6">
       <h1 className="text-2xl font-bold">benchmon</h1>
-      {init !== "finished" ? <p>loading</p> : user ? <Account /> : <Login />}
+      <Account />
     </main>
   );
 }
