@@ -6,6 +6,7 @@ import { DEV, SEAT, devUrl } from "../dev";
 import { short, useBalance } from "../hooks";
 import { Btn, Ico, Panel, type IcoName } from "../ui/kit";
 import { Trade } from "./Trade";
+import { Home } from "./Home";
 
 export type Tab = "home" | "decks" | "play" | "trade" | "ranks";
 const NAV: { id: Tab; label: string; icon: IcoName }[] = [
@@ -151,7 +152,7 @@ export function Shell() {
               <Game />
             </Panel>
           ) : tab === "home" ? (
-            <Soon go={go}>the lobby is next in the new look: featured match banner, trending matches as big tiles, and a right rail with the live duel and price history.</Soon>
+            <Home go={go} />
           ) : tab === "decks" ? (
             <Soon go={go}>collection and deck builder, restyled after the lobby.</Soon>
           ) : (
