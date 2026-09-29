@@ -111,3 +111,9 @@
 .fan-card:hover { translate: calc(-50% + var(--x)) calc(var(--y) - 22px); }
 @keyframes fan-in { from { opacity: 0; translate: -50% 60px; rotate: 0deg; } }
 @media (prefers-reduced-motion: reduce) { .fan-card { animation: none; transition: none; } }
+
+/* landing animations */
+@keyframes wall-up { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes wall-down { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [class*="animate-[wall"] { animation: none !important; } }
