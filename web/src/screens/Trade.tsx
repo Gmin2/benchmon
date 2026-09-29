@@ -8,6 +8,7 @@ import { useWallet } from "../useWallet";
 import { AreaChart } from "../ui/chart";
 import { Btn, Chip, Ico, IconBtn, Panel, SearchBar, Seg } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
+import { MatchStage } from "./MatchStage";
 
 const RANGES = ["all", "1h", "10m"] as const;
 type Range = (typeof RANGES)[number];
@@ -66,6 +67,7 @@ export function Trade() {
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState("");
   const [history, setHistory] = useState<Sample[]>([]);
+  const [view, setView] = useState<"both" | "chart">("both");
 
   const withMarket = markets.filter((m) => m.open);
   const m = markets.find((x) => x.id === pick) ?? withMarket[0] ?? markets[0];
@@ -145,10 +147,16 @@ export function Trade() {
         <div className="flex items-center justify-between gap-4">
           <SearchBar placeholder="Search matches, models or players" />
           <div className="hidden gap-3 md:flex">
-            <IconBtn name="square-activity-chart" label="line chart" active />
-            <IconBtn name="layers" label="order book" />
+            <IconBtn name="gamepad" label="show the match" active={view !== "chart"} onClick={() => setView(view === "chart" ? "both" : "chart")} />
+            <IconBtn name="square-activity-chart" label="chart only" active={view === "chart"} onClick={() => setView("chart")} />
           </div>
         </div>
+
+        {m && view === "both" && (
+          <div className="mt-8">
+            <MatchStage id={m.id} match={m.match} cards={cards} />
+          </div>
+        )}
 
         <div className="mt-10 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -182,7 +190,7 @@ export function Trade() {
 
         <div className="mt-6">
           {m?.open ? (
-            <AreaChart data={chartData} format={cents} height={380} />
+            <AreaChart data={chartData} format={cents} height={view === "chart" ? 380 : 300} />
           ) : (
             <div className="grid h-[380px] place-items-center rounded-[var(--radius-panel)] border border-dashed border-line text-mute">
               {markets.length ? "no market was opened for this match yet" : err ? `retrying: ${err}` : "loading markets"}

@@ -28,6 +28,13 @@ const server = Bun.serve({
       if (!(await f.exists())) return Response.json({ error: "no stats built yet" }, { status: 404, headers: cors });
       return new Response(f, { headers: { ...cors, "content-type": "application/json" } });
     }
+    // the live duel transcript: prompt, both answers, timing, cost and the verdict reason
+    const duel = url.pathname.match(/^\/duel\/(\d+)$/);
+    if (duel) {
+      const f = Bun.file(`${config.duelsDir}${duel[1]}.json`);
+      if (!(await f.exists())) return Response.json({ error: "no transcript yet" }, { status: 404, headers: cors });
+      return new Response(f, { headers: { ...cors, "content-type": "application/json" } });
+    }
     if (url.pathname === "/health") {
       const [block, matches, onchainJudge] = await Promise.all([
         pub.getBlockNumber(),
