@@ -97,3 +97,11 @@ export function mockDuel(arena: number, a: Card, b: Card, winner: 0 | 1 | 2): Tr
 
 export const byName = (n: string) => ROSTER.find((c) => c.name === n)!;
 export const byId = (id: number) => ROSTER.find((c) => c.id === id)!;
+
+export type LiveMatch = { id: number; a: Player; b: Player; cardA: string; cardB: string; arena: number; round: number; winsA: number; winsB: number; pot: number; priceA: number; watchers: number; duel?: boolean };
+export const LIVE_MATCHES: LiveMatch[] = [
+  { id: 39, a: PLAYERS[0]!, b: PLAYERS[4]!, cardA: "claude-fable-5", cardB: "deepseek-v4.1-flash", arena: 2, round: 2, winsA: 1, winsB: 1, pot: 0.2, priceA: 0.64, watchers: 128, duel: true },
+  { id: 36, a: PLAYERS[1]!, b: PLAYERS[6]!, cardA: "grok-4.20", cardB: "gemini-3.8-flash", arena: 3, round: 1, winsA: 1, winsB: 0, pot: 0.1, priceA: 0.71, watchers: 54 },
+  { id: 35, a: PLAYERS[2]!, b: PLAYERS[7]!, cardA: "claude-opus-5.5", cardB: "glm-5.3", arena: 0, round: 0, winsA: 0, winsB: 0, pot: 0.5, priceA: 0.58, watchers: 211 },
+  { id: 33, a: PLAYERS[3]!, b: PLAYERS[8]!, cardA: "kimi-k3", cardB: "gpt-5.6-sol", arena: 5, round: 1, winsA: 0, winsB: 1, pot: 0.05, priceA: 0.39, watchers: 37 },
+];
