@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { hexToRgb, lightness, rampFrom, rgbToHex, type Rgb } from "./color";
+import { clean, flattenLayer } from "./clean";
 
 const root = resolve(import.meta.dir, "..");
 const vendor = join(root, "vendor");
@@ -9,6 +10,8 @@ const outDir = process.env.OUT ? resolve(process.env.OUT) : join(root, "out");
 const cardsFile = process.env.CARDS ? resolve(process.env.CARDS) : join(root, "cards.json");
 
 const FRAME = 64;
+// shades kept per part, 0 keeps the raw lpc shading
+const FLAT = Number(process.env.FLAT ?? 3);
 // walk sheet: 9 columns, rows are up / left / down / right. column 0 is the
 // standing pose, row 2 faces the camera.
 const DOWN_ROW = 2;
@@ -29,6 +32,7 @@ export type CardSpec = {
   eyes?: string;
   outline?: "none" | "dark" | "thick";
   shades?: 3;
+  flat?: number;
   layers: LayerSpec[];
 };
 
@@ -315,6 +319,9 @@ async function layerCalls(card: CardSpec, layer: LayerSpec): Promise<DrawCall[]>
       .filter(([from]) => from.length > 0)
       .map(([from, to]): [string[], string[]] => [from, card.shades === 3 ? collapse(to, mainTone(from, frame)) : to]);
     if (live.length) recolor(frame, live);
+    // heads carry the eyes and charms are tiny, flattening them wipes the detail
+    const flat = card.flat ?? FLAT;
+    if (flat && !layer.item.startsWith("head/") && !layer.item.includes("/charms/")) flattenLayer(frame.data, FRAME, flat);
     if (layer.shift) shift(frame, layer.shift);
 
     creditFiles.add(file.slice(join(vendor, "spritesheets").length + 1));
@@ -358,7 +365,10 @@ export async function composeCard(card: CardSpec): Promise<Uint8Array> {
   calls.sort((a, b) => a.z - b.z);
   const canvas = new Uint8Array(FRAME * FRAME * 4);
   for (const call of calls) over(canvas, call.frame.data);
-  return card.outline === "none" ? canvas : ink(canvas, card.outline ?? "dark");
+  const inked = card.outline === "none" ? canvas : ink(canvas, card.outline ?? "dark");
+  if (!(card.flat ?? FLAT)) return inked;
+  const tidy = clean({ w: FRAME, h: FRAME, data: Buffer.from(inked) }, { colors: 256, despeckle: 1, edge: card.outline !== "none" });
+  return new Uint8Array(tidy.data);
 }
 
 const INK: Rgb = [20, 12, 24];
