@@ -55,6 +55,13 @@
   <h2>the collection, by power</h2>
   <div class="grid" id="collection"></div>
 
+  <h2>card back</h2>
+  <div class="grid" id="backs"></div>
+
+  <h2>commit phase, your hand locking in</h2>
+  <div class="seg" style="margin-bottom:18px"><button id="lockall">lock in a card</button><button id="resetall">reset hand</button></div>
+  <div class="grid" id="hand"></div>
+
   <h2>rarity</h2>
   <div class="grid" id="rarity"></div>
 
@@ -67,10 +74,12 @@
 
 <script src="data.js"></script>
 <script src="icons.js"></script>
+<script src="back.js"></script>
 <script src="card.js"></script>
 <script>
 const { cards, statOrder } = window.BENCHMON
 const byName = Object.fromEntries(cards.map(c => [c.name, c]))
+const hash = i => "0x" + [...Array(64)].map((_, j) => "0123456789abcdef"[(i * 7 + j * 13 + j * j) % 16]).join("")
 const ui = { name: "claude-fable-5", tier: null, arena: "code", facing: null, state: null, facedown: false }
 
 function seg(id, values, key, label = v => v ?? "none") {
@@ -134,7 +143,7 @@ const demo = [
   ["selected", { state: "selected" }],
   ["over the cap", { state: "locked" }],
   ["used this match", { state: "used" }],
-  ["face down, committed", { facedown: true }],
+  ["face down, committed", { facedown: true, back: { side: "mine", commit: hash(9) } }],
   ["arena stat lit", { arena: "reasoning" }],
   ["matchup hint", { facing: "speed" }],
   ["round winner", { state: "winner" }],
@@ -150,6 +159,34 @@ demo.forEach(([cap, opts], i) => {
   cell.insertAdjacentHTML("beforeend", `<div class="cap">${cap}</div>`)
   states.append(cell)
 })
+
+const backs = document.getElementById("backs")
+for (const [cap, back] of [
+  ["yours · default lime", { side: "mine", commit: hash(1) }],
+  ["yours · researcher blue", { side: "mine", color: "#3d7de0", commit: hash(2) }],
+  ["yours · athlete pink", { side: "mine", color: "#e85d9a", commit: hash(3) }],
+  ["theirs · opponent", { side: "theirs", commit: hash(4) }],
+  ["not committed yet", { side: "mine" }],
+]) {
+  const cell = document.createElement("div")
+  cell.className = "cell"
+  cell.append(renderCard(byName["claude-opus-5.5"], { size: "hand", facedown: true, back }))
+  cell.insertAdjacentHTML("beforeend", `<div class="cap">${cap}</div>`)
+  backs.append(cell)
+}
+
+const handNames = ["kimi-k3", "gemini-3.8-flash", "glm-5.3", "hy3", "grok-4.20"]
+function dealHand() {
+  const hand = document.getElementById("hand")
+  hand.replaceChildren(...handNames.map((n, i) => renderCard(byName[n], { size: "tile", back: { side: "mine", commit: hash(10 + i) } })))
+  hand.querySelectorAll(".bm-card").forEach(el => el.addEventListener("click", () => lockIn(el)))
+}
+dealHand()
+document.getElementById("lockall").addEventListener("click", () => {
+  const next = document.querySelector("#hand .bm-card:not(.is-facedown)")
+  if (next) lockIn(next)
+})
+document.getElementById("resetall").addEventListener("click", dealHand)
 
 const sizes = document.getElementById("sizes")
 for (const [size, cap] of [["full", "full · detail"], ["hand", "hand · in match"], ["tile", "tile · deck builder"], ["mini", "mini · history rows"]]) {

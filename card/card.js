@@ -75,9 +75,7 @@ function renderCard(card, opts = {}) {
           <footer class="foot">${evoChip}<span>stats arena cc-by</span></footer>
         </div>
       </div>
-      <div class="side back">
-        <div class="face"><div class="seal">${icon("power")}</div><div class="word">BENCHMON</div></div>
-      </div>
+      ${backHtml(opts.back)}
     </div>
     ${tag ? `<div class="overlay"><span class="tag">${tag[0] ? icon(tag[0]) : ""}${tag[1]}</span></div>` : ""}
   `
