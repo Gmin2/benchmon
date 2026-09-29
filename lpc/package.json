@@ -5,7 +5,12 @@
   "scripts": {
     "compose": "bun src/compose.ts",
     "sheet": "bun src/sheet.ts",
-    "build": "bun src/compose.ts && bun src/sheet.ts"
+    "build": "bun src/compose.ts && bun src/sheet.ts",
+    "marks": "bun src/marks.ts",
+    "lineage": "bun src/lineage.ts",
+    "players": "bun src/players.ts",
+    "gallery": "bun src/gallery-data.ts",
+    "all": "bun src/compose.ts && bun src/sheet.ts && bun src/marks.ts && bun src/lineage.ts && bun src/players.ts && bun src/gallery-data.ts"
   },
   "dependencies": {
     "sharp": "^0.35.5"

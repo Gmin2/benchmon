@@ -1,0 +1,356 @@
+[
+  {
+    "line": "claude-opus",
+    "family": "claude",
+    "releases": [
+      {
+        "name": "claude-opus-4.5",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "claude-opus-5",
+        "step": 1,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "claude-opus-5.5",
+        "step": 2,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "claude-opus-6",
+        "step": 3,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "claude-fable",
+    "family": "claude",
+    "releases": [
+      {
+        "name": "claude-fable-5",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "claude-fable-6",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "gpt-luna",
+    "family": "gpt",
+    "releases": [
+      {
+        "name": "gpt-5-luna",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "gpt-5.6-luna",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "gpt-6-luna",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "gpt-sol",
+    "family": "gpt",
+    "releases": [
+      {
+        "name": "gpt-5-sol",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "gpt-5.6-sol",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "gpt-6-sol",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "gpt-astra",
+    "family": "gpt",
+    "releases": [
+      {
+        "name": "gpt-6-astra",
+        "step": 2,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "gpt-6.5-astra",
+        "step": 3,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "gemini-flash",
+    "family": "gemini",
+    "releases": [
+      {
+        "name": "gemini-3-flash",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "gemini-3.8-flash",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "gemini-4-flash",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "deepseek-flash",
+    "family": "deepseek",
+    "releases": [
+      {
+        "name": "deepseek-v3.5-flash",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "deepseek-v4.1-flash",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "deepseek-v5-flash",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "kimi",
+    "family": "kimi",
+    "releases": [
+      {
+        "name": "kimi-k2",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "kimi-k3",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "kimi-k4",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "hy",
+    "family": "hunyuan",
+    "releases": [
+      {
+        "name": "hy2",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "hy3",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "hy4",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "glm",
+    "family": "glm",
+    "releases": [
+      {
+        "name": "glm-4.5",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "glm-5.3",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "glm-6",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "qwen-max",
+    "family": "qwen",
+    "releases": [
+      {
+        "name": "qwen3-max",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "qwen3.8-max",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "qwen4-max",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "grok",
+    "family": "grok",
+    "releases": [
+      {
+        "name": "grok-3",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "grok-4.20",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "grok-5",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "mimo-pro",
+    "family": "mimo",
+    "releases": [
+      {
+        "name": "mimo-v2-pro",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "mimo-v2.6-pro",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "mimo-v3-pro",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "minimax",
+    "family": "minimax",
+    "releases": [
+      {
+        "name": "minimax-m2",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "minimax-m3",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "minimax-m4",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  },
+  {
+    "line": "mistral-medium",
+    "family": "mistral",
+    "releases": [
+      {
+        "name": "mistral-medium-3",
+        "step": 0,
+        "roster": false,
+        "next": false
+      },
+      {
+        "name": "mistral-medium-3.5",
+        "step": 1,
+        "roster": true,
+        "next": false
+      },
+      {
+        "name": "mistral-medium-4",
+        "step": 2,
+        "roster": false,
+        "next": true
+      }
+    ]
+  }
+]

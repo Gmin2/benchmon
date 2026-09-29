@@ -1,0 +1,302 @@
+[
+  {
+    "address": "0x824a16c631f67923a36e8b4f327e3bcf17ebe7e8",
+    "species": "lizard",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x2c1aec46b769f30183831e4698d5a76478760b2b",
+    "species": "alien",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x1d06b187cf6e5f0de2db6d6d80e7873d78b90d9c",
+    "species": "goblin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xec8fd440c5dbdc73e9fd43a6339982756d570242",
+    "species": "alien",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x6278cd8366986ed5b28b6c2f76a99c2aa0b1be96",
+    "species": "rabbit",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x4868e2415093725310bc3c32cc897d84afb57fb1",
+    "species": "vampire",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x3b638287520f1ff24b3b3e879ed97f8d2fdebf79",
+    "species": "orc",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x25e176d1d72baa706aab9bd6acb8d3762876ade0",
+    "species": "skeleton",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xcac4526b81f3ad2451d38ccca4aa9236ebc0031b",
+    "species": "goblin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xbe0dd4482947b8c7ff66f84aa4142e03c9448fb0",
+    "species": "orc",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xcd455bb1c3b277a54df228396c1a77bf815e7a24",
+    "species": "rabbit",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x15ddd268af1e9b106b17e3a1b4ea0cee87895fae",
+    "species": "skeleton",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xf93dd8a7ef115b3e276dcfc2d12c377fb95f7df4",
+    "species": "goblin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xe54fc5776c05c940b8478e0f5d8d45d818fffd60",
+    "species": "goblin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xfe4d42cec5b73afab66e412cf8dc14315fba29c5",
+    "species": "pumpkin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x1b01fd89bfba89c66faf7911bb4a8969b0a23e30",
+    "species": "goblin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x131d9c46f0df96eb601fe38e4f4959867ac78b02",
+    "species": "mouse",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x62a69bf9c7e33cf361ff4a8d986f937e36cda67a",
+    "species": "rabbit",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x90956729f1f849f57d5217b4e2ca5281ab632a50",
+    "species": "lizard",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x67ff84e50bb2ca8938c21c950f9ac5848faa4cb0",
+    "species": "mouse",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x9d5951be5dfe7ed6c6f165abbe68f2007e4ea765",
+    "species": "mouse",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x67339ce0c0fe9e46da804bdf089183a9f70c7cf8",
+    "species": "orc",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x06d498ba161f98c3435fb0354c1ab5440ac3f554",
+    "species": "pumpkin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xedd150e012ae9af66af283ab733b1f21e4157066",
+    "species": "pumpkin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x036a43f8235622cd7b2f210ec178ebc8af41044b",
+    "species": "mouse",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x39b1c7f5c46de078693ca5c6413f595df721bc97",
+    "species": "skeleton",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xdee4336e9c7e12db77b30df5f99fea422337dbe3",
+    "species": "pumpkin",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x1f0704318ed97d801f55e77cece5bbeb0006ebdd",
+    "species": "mouse",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0xe965cc11a92709606718b77ab1aa75d9d406d153",
+    "species": "orc",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  },
+  {
+    "address": "0x1b33231f0a998c36f3034ab016346780b2015cf6",
+    "species": "vampire",
+    "ranks": [
+      "rookie",
+      "trainer",
+      "ace",
+      "champion"
+    ]
+  }
+]
