@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>benchmon arts</title>
+<style>
+  :root { --bg: #eef1ea; --card: #fff; --ink: #1c1c24; --mute: #6b7068; --line: #d9ddd4; --tile: #b8c8b0; --pick: #9e4dfd; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 Menlo, ui-monospace, monospace; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  h1 { font-size: 16px; margin: 0 16px 0 0; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+  button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .gap { flex: 1; }
+  label { color: var(--mute); display: flex; gap: 6px; align-items: center; }
+  main { padding: 20px; }
+  img { image-rendering: pixelated; display: block; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(var(--size, 200px), 1fr)); }
+  .cell { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .cell .pic { background: var(--tile); border-radius: 6px; display: flex; justify-content: center; align-items: center; aspect-ratio: 1; overflow: hidden; }
+  .cell .pic img { width: 100%; height: 100%; object-fit: contain; }
+  .cell .name { margin-top: 8px; font-size: 12px; color: var(--mute); text-align: center; }
+  .cell.picked { outline: 3px solid var(--pick); }
+  table { border-collapse: separate; border-spacing: 8px; }
+  th { font-weight: normal; color: var(--mute); font-size: 12px; text-align: center; position: sticky; top: 58px; background: var(--bg); padding: 4px; }
+  th.row { text-align: right; position: static; white-space: nowrap; }
+  td .pic { background: var(--tile); border-radius: 6px; width: var(--size, 150px); height: var(--size, 150px); display: flex; align-items: center; justify-content: center; cursor: zoom-in; }
+  td .pic img { width: 100%; height: 100%; object-fit: contain; }
+  td .pic.picked { outline: 3px solid var(--pick); }
+  .sheet img { max-width: 100%; border-radius: 8px; margin-bottom: 24px; }
+  .sheet h2 { font-size: 14px; margin: 0 0 8px; }
+  .note { color: var(--mute); margin: 0 0 16px; max-width: 70ch; }
+  #zoom { position: fixed; inset: 0; background: rgba(20,20,28,.85); display: none; align-items: center; justify-content: center; z-index: 10; cursor: zoom-out; flex-direction: column; gap: 12px; color: #fff; }
+  #zoom img { width: min(80vw, 80vh); height: min(80vw, 80vh); object-fit: contain; background: var(--tile); border-radius: 12px; }
+  #picks { color: var(--pick); }
+  @media (max-width: 600px) { header { position: static; } th { position: static; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>benchmon arts</h1>
+  <button data-view="compare" class="on">compare by card</button>
+  <button data-view="looks">one look, all cards</button>
+  <button data-view="sheets">raw sheets</button>
+  <span class="gap"></span>
+  <label>size <input id="size" type="range" min="80" max="320" value="150"></label>
+  <span id="picks"></span>
+</header>
+<main id="app"></main>
+<div id="zoom"><img alt=""><span></span></div>
+
+<script>
+const cards = ["claude-opus-5.5","deepseek-v4.1-flash","gemini-3.8-flash","hy3","gpt-5.6-luna","claude-fable-5","kimi-k3","gpt-6-astra","glm-5.3","qwen3.8-max","grok-4.20","gpt-5.6-sol","mimo-v2.6-pro","minimax-m3","mistral-medium-3.5"]
+
+const looks = [
+  { id: "lpc-mark", title: "lpc full + mark", src: c => `lpc/out/marked/${c}@8x.png` },
+  { id: "lpc-bust-mark", title: "lpc bust + mark", src: c => `lpc/out/marked/${c}-bust@8x.png` },
+  { id: "tdsm", title: "gen 3 plain", src: c => `tdsm/out/${c}@8x.png` },
+  { id: "a-chest", title: "a chest emblem", src: c => `tdsm/out/variants/a-chest/${c}.png` },
+  { id: "b-held", title: "b holding the mark", src: c => `tdsm/out/variants/b-held/${c}.png` },
+  { id: "c-standee", title: "c mark beside", src: c => `tdsm/out/variants/c-standee/${c}.png` },
+  { id: "d-halo", title: "d big mark behind", src: c => `tdsm/out/variants/d-halo/${c}.png` },
+  { id: "e-platform", title: "e standing on the mark", src: c => `tdsm/out/variants/e-platform/${c}.png` },
+  { id: "f-partner", title: "f mark by the head", src: c => `tdsm/out/variants/f-partner/${c}.png` },
+  { id: "g-flag", title: "g carrying a flag", src: c => `tdsm/out/variants/g-flag/${c}.png` },
+  { id: "lpc", title: "lpc full body", src: c => `lpc/out/${c}@8x.png` },
+  { id: "lpc-bust", title: "lpc bust", src: c => `lpc/out/${c}-bust@8x.png` },
+]
+
+const sheets = [
+  ["your reference", "refs/target-gen3.png"],
+  ["gen 3 overview (7 logo versions)", "tdsm/out/variants/overview.png"],
+  ["gen 3 with badges", "tdsm/out/sheet.png"],
+  ...["a-chest","b-held","c-standee","d-halo","e-platform","f-partner","g-flag"].map(v => [`gen 3 ${v}`, `tdsm/out/variants/${v}.png`]),
+  ["lpc full body", "lpc/out/sheet.png"],
+  ["lpc bust", "lpc/out/sheet-bust.png"],
+]
+
+let view = "compare"
+let look = localGet("look") || "lpc-mark"
+const picked = new Set(JSON.parse(localGet("picked") || "[]"))
+
+function localGet(k) { try { return localStorage.getItem("bm-" + k) } catch { return null } }
+function localSet(k, v) { try { localStorage.setItem("bm-" + k, v) } catch {} }
+
+function pic(src, key, label) {
+  return `<div class="pic ${picked.has(key) ? "picked" : ""}" data-key="${key}" data-src="${src}" data-label="${label}"><img src="${src}" alt="${label}" loading="lazy"></div>`
+}
+
+function render() {
+  const app = document.getElementById("app")
+  document.querySelectorAll("header button").forEach(b => b.classList.toggle("on", b.dataset.view === view))
+  document.getElementById("picks").textContent = picked.size ? `${picked.size} starred (shift+click)` : "shift+click to star"
+
+  if (view === "compare") {
+    app.innerHTML = `<p class="note">every row is one card, every column one look. click to zoom, shift+click to star the ones you like.</p>
+      <table><thead><tr><th></th>${looks.map(l => `<th>${l.title}</th>`).join("")}</tr></thead><tbody>
+      ${cards.map(c => `<tr><th class="row">${c}</th>${looks.map(l => `<td>${pic(l.src(c), `${l.id}/${c}`, `${c} · ${l.title}`)}</td>`).join("")}</tr>`).join("")}
+      </tbody></table>`
+  } else if (view === "looks") {
+    app.innerHTML = `<p>${looks.map(l => `<button data-look="${l.id}" class="${l.id === look ? "on" : ""}">${l.title}</button>`).join(" ")}</p>
+      <div class="grid">${cards.map(c => {
+        const l = looks.find(x => x.id === look)
+        return `<div class="cell">${pic(l.src(c), `${l.id}/${c}`, `${c} · ${l.title}`)}<div class="name">${c}</div></div>`
+      }).join("")}</div>`
+  } else {
+    app.innerHTML = sheets.map(([t, s]) => `<div class="sheet"><h2>${t}</h2><img src="${s}" alt="${t}" loading="lazy"></div>`).join("")
+  }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button")
+  if (b?.dataset.view) { view = b.dataset.view; render(); return }
+  if (b?.dataset.look) { look = b.dataset.look; localSet("look", look); render(); return }
+  const p = e.target.closest(".pic")
+  if (p && e.shiftKey) {
+    picked.has(p.dataset.key) ? picked.delete(p.dataset.key) : picked.add(p.dataset.key)
+    localSet("picked", JSON.stringify([...picked]))
+    render()
+    return
+  }
+  if (p) {
+    const z = document.getElementById("zoom")
+    z.querySelector("img").src = p.dataset.src
+    z.querySelector("span").textContent = p.dataset.label
+    z.style.display = "flex"
+    return
+  }
+  if (e.target.closest("#zoom")) document.getElementById("zoom").style.display = "none"
+})
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("zoom").style.display = "none" })
+document.getElementById("size").addEventListener("input", e => document.documentElement.style.setProperty("--size", e.target.value + "px"))
+render()
+</script>
+</body>
+</html>

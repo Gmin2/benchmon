@@ -1,0 +1,252 @@
+{
+  "cards": [
+    {
+      "name": "claude-opus-5.5",
+      "lab": "anthropic",
+      "body": "male",
+      "skin": "light",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male_elderly" },
+        { "item": "hair/short/hair_parted", "color": "gray" },
+        { "item": "hair/beards/beards_trimmed", "color": "gray" },
+        { "item": "headwear/accessories/glasses/facial_glasses_round", "variant": "black" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve2_buttoned", "color": "#f4e9dc" },
+        { "item": "torso/jacket/torso_jacket_trench", "variant": "gray", "color": "#d97757" },
+        { "item": "legs/pants/legs_formal", "color": "walnut" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "brown" },
+        { "item": "weapons/polearm/weapon_polearm_cane" }
+      ]
+    },
+    {
+      "name": "deepseek-v4.1-flash",
+      "lab": "deepseek",
+      "body": "male",
+      "skin": "amber",
+      "eyes": "blue",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/short/hair_messy1", "color": "dark_brown" },
+        { "item": "headwear/coverings/bandana/hat_bandana", "color": "#0b1f5c" },
+        { "item": "torso/shirts/sleeveless/torso_clothes_sleeveless_striped", "variant": "blue", "color": "#4d6bfe" },
+        { "item": "headwear/neck/neck_scarf", "color": "#0b1f5c" },
+        { "item": "legs/shorts/legs_shorts", "color": "white" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "#0b1f5c" }
+      ]
+    },
+    {
+      "name": "gemini-3.8-flash",
+      "lab": "google",
+      "body": "female",
+      "skin": "light",
+      "eyes": "blue",
+      "layers": [
+        { "item": "head/heads/human/heads_human_female" },
+        { "item": "hair/pigtails/hair_pigtails", "color": ["blonde", "#4285f4"] },
+        { "item": "torso/shirts/torso_clothes_blouse", "variant": "blue", "color": "#4285f4" },
+        { "item": "headwear/neck/charms/neck_amulet_star", "variant": "brass_orange" },
+        { "item": "legs/skirts/legs_skirts_plain", "color": "#fbbc05" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "red" }
+      ]
+    },
+    {
+      "name": "hy3",
+      "lab": "tencent",
+      "body": "male",
+      "skin": "light",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male_small" },
+        { "item": "hair/short/hair_bangsshort", "color": "black" },
+        { "item": "headwear/hats/caps/hat_cap_bonnie", "variant": "blue", "color": "#0052d9" },
+        { "item": "torso/shirts/shortsleeve/torso_clothes_tshirt", "color": "white" },
+        { "item": "torso/backpack/backpack_straps", "variant": "green", "color": "#00a870" },
+        { "item": "legs/shorts/legs_shorts", "color": "#0052d9" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "white" }
+      ]
+    },
+    {
+      "name": "gpt-5.6-luna",
+      "lab": "openai",
+      "body": "female",
+      "skin": "light",
+      "eyes": "gray",
+      "layers": [
+        { "item": "head/heads/human/heads_human_female" },
+        { "item": "hair/long/hair_long_straight", "color": "platinum" },
+        { "item": "headwear/hats/magic/hat_magic_celestial_moon", "variant": "black", "color": "#1a1a1a" },
+        { "item": "torso/shirts/torso_clothes_robe", "variant": "white", "color": "#f2f2f7" },
+        { "item": "headwear/accessories/earrings/facial_earrings_moon", "variant": "silver" },
+        { "item": "feet/feet_slippers", "color": "white" }
+      ]
+    },
+    {
+      "name": "claude-fable-5",
+      "lab": "anthropic",
+      "body": "male",
+      "skin": "light",
+      "eyes": "green",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/long/hair_long_messy", "color": "chestnut" },
+        { "item": "headwear/hats/magic/hat_magic_wizard", "variant": "orange", "color": "#d97757" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve", "color": "#f4e9dc" },
+        { "item": "torso/waist/belt_leather", "variant": "brown" },
+        { "item": "legs/pants/legs_pants", "color": "#f4e9dc" },
+        { "item": "feet/boots/feet_boots_basic", "color": "brown" },
+        { "item": "weapons/magic/weapon_magic_gnarled", "variant": "medium" }
+      ]
+    },
+    {
+      "name": "kimi-k3",
+      "lab": "moonshot",
+      "body": "male",
+      "skin": "light",
+      "eyes": "purple",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "headwear/helmets/helmets/hat_helmet_bascinet_round", "color": "#2b2b3a" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve2", "color": "#e8e8ff" },
+        { "item": "torso/waist/belt_leather", "variant": "charcoal" },
+        { "item": "arms/arms_gloves", "color": "#2b2b3a" },
+        { "item": "legs/pants/legs_pants", "color": "#e8e8ff" },
+        { "item": "feet/boots/feet_boots_basic", "color": "#2b2b3a" }
+      ]
+    },
+    {
+      "name": "gpt-6-astra",
+      "lab": "openai",
+      "body": "male",
+      "skin": "taupe",
+      "eyes": "gray",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/short/hair_messy2", "color": "black" },
+        { "item": "headwear/accessories/glasses/facial_glasses_round", "variant": "sunglasses" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve2_polo", "color": "white" },
+        { "item": "torso/jacket/torso_jacket_collared", "variant": "black", "color": "#1a1a1a" },
+        { "item": "legs/pants/legs_pants", "color": "gray" },
+        { "item": "feet/boots/feet_boots_basic", "color": "black" }
+      ]
+    },
+    {
+      "name": "glm-5.3",
+      "lab": "zai",
+      "body": "female",
+      "skin": "olive",
+      "eyes": "blue",
+      "layers": [
+        { "item": "head/heads/human/heads_human_female" },
+        { "item": "hair/bob/hair_bob", "color": "navy" },
+        { "item": "headwear/coverings/headbands/hat_headband_thick", "color": "#3a5bff" },
+        { "item": "headwear/accessories/glasses/facial_glasses_nerd", "variant": "black" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve2_polo", "color": "#c8d2ff" },
+        { "item": "torso/aprons/torso_aprons_suspenders", "variant": "blue", "color": "#3a5bff" },
+        { "item": "legs/pants/legs_pants", "color": "#3a5bff" },
+        { "item": "feet/boots/feet_boots_basic", "color": "charcoal" }
+      ]
+    },
+    {
+      "name": "qwen3.8-max",
+      "lab": "alibaba",
+      "body": "male",
+      "skin": "light",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male_plump" },
+        { "item": "hair/short/hair_plain", "color": "black" },
+        { "item": "hair/mustaches/beards_mustache", "color": "black" },
+        { "item": "headwear/hats/formal/hat_formal_bowler", "variant": "purple", "color": "#6c3bff" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve", "color": "#ff6a00" },
+        { "item": "torso/vest/torso_clothes_vest", "variant": "purple", "color": "#6c3bff" },
+        { "item": "torso/backpack/backpack_squarepack", "variant": "tan" },
+        { "item": "torso/backpack/backpack_straps", "variant": "tan" },
+        { "item": "legs/pants/legs_pants", "color": "#3b2a6e" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "brown" }
+      ]
+    },
+    {
+      "name": "grok-4.20",
+      "lab": "xai",
+      "body": "male",
+      "skin": "light",
+      "eyes": "red",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/spiky/hair_spiked_liberty", "color": "#e0e0e0" },
+        { "item": "headwear/accessories/glasses/facial_glasses_shades", "variant": "black" },
+        { "item": "torso/shirts/sleeveless/torso_clothes_sleeveless2", "color": "#e0e0e0" },
+        { "item": "torso/vest/torso_clothes_vest_open", "variant": "black", "color": "#0f0f0f" },
+        { "item": "headwear/neck/neck_necklace_chain", "variant": "silver" },
+        { "item": "legs/pants/legs_pants2", "color": "#0f0f0f" },
+        { "item": "feet/boots/feet_boots_rim", "color": "black" }
+      ]
+    },
+    {
+      "name": "gpt-5.6-sol",
+      "lab": "openai",
+      "body": "female",
+      "skin": "amber",
+      "eyes": "orange",
+      "layers": [
+        { "item": "head/heads/human/heads_human_female" },
+        { "item": "hair/xlong/hair_xlong_wavy", "color": "gold" },
+        { "item": "headwear/hats/formal/hat_formal_tiara", "variant": "tiara_gold" },
+        { "item": "torso/dresses/kimono/dress_kimono", "variant": "white", "color": "white" },
+        { "item": "torso/waist/belt_sash", "variant": "yellow", "color": "#f5b400" },
+        { "item": "headwear/neck/charms/neck_amulet_star", "variant": "brass_orange" },
+        { "item": "feet/feet_sandals", "color": "tan" }
+      ]
+    },
+    {
+      "name": "mimo-v2.6-pro",
+      "lab": "xiaomi",
+      "body": "male",
+      "skin": "bronze",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/short/hair_cowlick", "color": "dark_brown" },
+        { "item": "headwear/coverings/bandana/hat_bandana2", "color": "white" },
+        { "item": "torso/shirts/shortsleeve/torso_clothes_tshirt", "color": "white" },
+        { "item": "torso/aprons/torso_aprons_overalls", "variant": "orange", "color": "#ff6900" },
+        { "item": "arms/arms_gloves", "color": "#555555" },
+        { "item": "legs/pants/legs_pants", "color": "#ff6900" },
+        { "item": "feet/boots/feet_boots_basic", "color": "charcoal" },
+        { "item": "tools/tool_hammer" }
+      ]
+    },
+    {
+      "name": "minimax-m3",
+      "lab": "minimax",
+      "body": "female",
+      "skin": "light",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_female" },
+        { "item": "hair/braids/hair_high_ponytail", "color": "dark_brown" },
+        { "item": "headwear/coverings/headbands/hat_headband_tied", "color": "#e5256b" },
+        { "item": "torso/shirts/sleeveless/torso_clothes_sleeveless2", "color": "#e5256b" },
+        { "item": "legs/shorts/legs_shorts_short", "color": "#ffd0e0" },
+        { "item": "feet/socks/feet_socks_high", "color": "white" },
+        { "item": "feet/shoes/feet_shoes_revised", "color": "#e5256b" }
+      ]
+    },
+    {
+      "name": "mistral-medium-3.5",
+      "lab": "mistral",
+      "body": "male",
+      "skin": "olive",
+      "eyes": "brown",
+      "layers": [
+        { "item": "head/heads/human/heads_human_male" },
+        { "item": "hair/short/hair_bedhead", "color": "ginger" },
+        { "item": "headwear/accessories/glasses/facial_glasses_sunglasses", "variant": "sunglasses" },
+        { "item": "torso/shirts/longsleeve/torso_clothes_longsleeve2_vneck", "color": "#ffd800" },
+        { "item": "headwear/neck/neck_scarf", "color": "#fa520f" },
+        { "item": "legs/leggings/legs_leggings", "color": "#1d1d1d" },
+        { "item": "feet/shoes/feet_shoes_basic", "color": "#fa520f" }
+      ]
+    }
+  ]
+}

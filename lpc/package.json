@@ -1,0 +1,17 @@
+{
+  "name": "benchmon-lpc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compose": "bun src/compose.ts",
+    "sheet": "bun src/sheet.ts",
+    "build": "bun src/compose.ts && bun src/sheet.ts"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}

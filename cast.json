@@ -1,0 +1,33 @@
+{
+  "labs": {
+    "anthropic": { "main": "#d97757", "accent": "#f4e9dc", "idea": "warm clay orange, cream, calm scholar" },
+    "openai": { "main": "#1a1a1a", "accent": "#ffffff", "idea": "black and white, clean, minimal" },
+    "google": { "main": "#4285f4", "accent": "#fbbc05", "idea": "blue with bright primary accents" },
+    "deepseek": { "main": "#4d6bfe", "accent": "#0b1f5c", "idea": "deep sea blue, diver or whale" },
+    "moonshot": { "main": "#2b2b3a", "accent": "#e8e8ff", "idea": "night sky, moon, astronaut" },
+    "tencent": { "main": "#0052d9", "accent": "#00a870", "idea": "blue and green" },
+    "zai": { "main": "#3a5bff", "accent": "#c8d2ff", "idea": "cool blue, tech" },
+    "alibaba": { "main": "#ff6a00", "accent": "#6c3bff", "idea": "orange and purple" },
+    "xai": { "main": "#0f0f0f", "accent": "#e0e0e0", "idea": "black, edgy, rebel" },
+    "xiaomi": { "main": "#ff6900", "accent": "#ffffff", "idea": "bright orange" },
+    "minimax": { "main": "#e5256b", "accent": "#ffd0e0", "idea": "pink red" },
+    "mistral": { "main": "#fa520f", "accent": "#ffd800", "idea": "orange to yellow, wind" }
+  },
+  "cards": [
+    { "id": 0, "name": "claude-opus-5.5", "lab": "anthropic", "type": "reasoning", "rarity": "legendary", "idea": "wise professor, long coat, glasses, book" },
+    { "id": 1, "name": "deepseek-v4.1-flash", "lab": "deepseek", "type": "cost", "rarity": "legendary", "idea": "diver or sailor, quick and cheap" },
+    { "id": 2, "name": "gemini-3.8-flash", "lab": "google", "type": "reasoning", "rarity": "rare", "idea": "twins motif, bright colours, star clip" },
+    { "id": 3, "name": "hy3", "lab": "tencent", "type": "cost", "rarity": "common", "idea": "young trainee, cap, backpack" },
+    { "id": 4, "name": "gpt-5.6-luna", "lab": "openai", "type": "cost", "rarity": "common", "idea": "moon theme, pale, night clothes" },
+    { "id": 5, "name": "claude-fable-5", "lab": "anthropic", "type": "reasoning", "rarity": "legendary", "idea": "storyteller, hood or wizard hat, quill" },
+    { "id": 6, "name": "kimi-k3", "lab": "moonshot", "type": "speed", "rarity": "legendary", "idea": "space explorer, moon helmet or visor" },
+    { "id": 7, "name": "gpt-6-astra", "lab": "openai", "type": "speed", "rarity": "common", "idea": "star pilot, jacket, goggles" },
+    { "id": 8, "name": "glm-5.3", "lab": "zai", "type": "speed", "rarity": "rare", "idea": "engineer, headset" },
+    { "id": 9, "name": "qwen3.8-max", "lab": "alibaba", "type": "cost", "rarity": "common", "idea": "merchant, big bag" },
+    { "id": 10, "name": "grok-4.20", "lab": "xai", "type": "speed", "rarity": "common", "idea": "punk rebel, leather jacket, shades" },
+    { "id": 11, "name": "gpt-5.6-sol", "lab": "openai", "type": "reasoning", "rarity": "rare", "idea": "sun theme, warm, bright" },
+    { "id": 12, "name": "mimo-v2.6-pro", "lab": "xiaomi", "type": "cost", "rarity": "rare", "idea": "mechanic, overalls, wrench" },
+    { "id": 13, "name": "minimax-m3", "lab": "minimax", "type": "speed", "rarity": "common", "idea": "runner, sporty, headband" },
+    { "id": 14, "name": "mistral-medium-3.5", "lab": "mistral", "type": "speed", "rarity": "common", "idea": "wind, scarf blowing, cyclist" }
+  ]
+}
