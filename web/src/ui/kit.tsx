@@ -68,11 +68,11 @@ export function Seg<T extends string>({ value, options, onChange }: { value: T; 
   );
 }
 
-export function SearchBar({ placeholder = "Search" }: { placeholder?: string }) {
+export function SearchBar({ placeholder = "Search", value, onChange }: { placeholder?: string; value?: string; onChange?: (v: string) => void }) {
   return (
     <label className="flex h-14 w-full max-w-[480px] items-center gap-3 rounded-full border border-line bg-panel px-5 text-mute focus-within:border-neon/50">
       <Ico name="magnifier" className="h-5 w-5" />
-      <input placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-dim" />
+      <input placeholder={placeholder} value={value} onChange={onChange && ((e) => onChange(e.target.value))} className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-dim" />
       <kbd className="grid h-8 w-8 place-items-center rounded-full bg-panel-2 font-sans text-xs text-mute">/</kbd>
     </label>
   );

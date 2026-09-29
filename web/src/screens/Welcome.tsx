@@ -1,47 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sendEmailOTP, verifyOTP } from "@dynamic-labs-sdk/client";
-import { loadCards, type Card } from "../chain";
-import { GameCard } from "../ui/Card";
-import { Brand, Frame, PxButton, Ticker } from "../ui/layout";
-import { infoOf } from "../ui/meta";
-import { Icon, type IconName } from "../ui/pixel";
+import { devUrl } from "../dev";
+import { byName } from "../mock";
+import { CardBack, GameCard } from "../ui/Card";
+import { Ico, type IcoName } from "../ui/kit";
+import { artOf, infoOf } from "../ui/meta";
 
 type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
-
-const FAN = [-24, -15, -7, 0, 7, 15, 24];
-const HAND = ["mimo-v2.6-pro", "kimi-k3", "claude-opus-5.5", "claude-fable-5", "deepseek-v4.1-flash", "gemini-3.8-flash", "glm-5.3"];
-
-function Word({ children, lime, icon }: { children: string; lime?: boolean; icon?: IconName }) {
-  return (
-    <span className={`flex items-center gap-2 px-3 leading-none ${lime ? "bg-primary/85 text-bg" : ""}`}>
-      {icon && <Icon name={icon} className="h-[0.7em] w-[0.7em]" />}
-      {children}
-    </span>
-  );
-}
-
-function Fan({ cards }: { cards: Card[] }) {
-  const hand = useMemo(() => {
-    const byName = Object.fromEntries(cards.map((c) => [c.name, c]));
-    return HAND.map((n) => byName[n]).filter((c): c is Card => Boolean(c));
-  }, [cards]);
-  return (
-    <div className="relative mt-12 h-[330px] w-full max-w-[820px]">
-      {hand.length === 0
-        ? FAN.map((r, i) => (
-            <div key={i} className="fan-card h-[250px] w-[170px] rounded-[6px] bg-subcolor" style={{ "--x": `${r * 12}px`, "--y": `${Math.abs(r) * 1.3}px`, "--r": `${r}deg`, "--n": i, zIndex: i } as React.CSSProperties} />
-          ))
-        : hand.map((c, i) => {
-            const r = FAN[i]!;
-            return (
-              <div key={c.id} className="fan-card" style={{ "--x": `${r * 12}px`, "--y": `${Math.abs(r) * 1.3}px`, "--r": `${r}deg`, "--n": i, zIndex: i } as React.CSSProperties}>
-                <GameCard info={infoOf(c)} size="tile" />
-              </div>
-            );
-          })}
-    </div>
-  );
-}
 
 function CodeBoxes({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
@@ -52,7 +17,7 @@ function CodeBoxes({ value, onChange, disabled }: { value: string; onChange: (v:
     refs.current[Math.min(5, i + digits.length)]?.focus();
   };
   return (
-    <div className="flex justify-center gap-2">
+    <div className="flex gap-2">
       {Array.from({ length: 6 }, (_, i) => (
         <input
           key={i}
@@ -75,7 +40,7 @@ function CodeBoxes({ value, onChange, disabled }: { value: string; onChange: (v:
               refs.current[i - 1]?.focus();
             }
           }}
-          className="px-corners h-14 w-12 bg-shade text-center font-display text-2xl text-main outline-none focus:bg-highlight"
+          className="h-14 w-12 rounded-2xl border-2 border-[#0f1a08]/15 bg-white text-center text-2xl font-bold text-[#0f1a08] outline-none focus:border-[#0f1a08]"
         />
       ))}
     </div>
@@ -117,120 +82,197 @@ function Login() {
   }, [code]);
 
   return (
-    <div id="login" className="mt-10 flex w-full max-w-[460px] flex-col items-center gap-4 px-4">
+    <div id="login" className="flex max-w-[460px] flex-col gap-3">
       {!otp ? (
         <form
-          className="flex w-full flex-col gap-3 sm:flex-row"
+          className="flex gap-2 rounded-full bg-white p-1.5 shadow-sm"
           onSubmit={(e) => {
             e.preventDefault();
             if (valid) send();
           }}
         >
-          <label className="px-corners flex h-[47px] flex-1 items-center gap-2 bg-shade px-3 focus-within:bg-highlight">
-            <Icon name="mail" className="h-4 w-4 text-subtext" />
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="your email"
-              aria-label="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent font-mono text-[15px] text-main outline-none placeholder:text-subtext"
-            />
-          </label>
-          <PxButton type="submit" disabled={!valid || busy}>
+          <input
+            type="email"
+            autoComplete="email"
+            placeholder="your email"
+            aria-label="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent pl-4 text-[15px] font-medium text-[#0f1a08] outline-none placeholder:text-[#0f1a08]/40"
+          />
+          <button type="submit" disabled={!valid || busy} className="h-12 shrink-0 rounded-full bg-[#0f1a08] px-6 text-[15px] font-bold text-neon transition hover:bg-black disabled:opacity-40">
             {busy ? "Sending" : "Start playing"}
-          </PxButton>
+          </button>
         </form>
       ) : (
         <>
-          <p className="text-center font-mono text-sm text-subtext">
-            code sent to <span className="text-main">{email}</span>
+          <p className="text-sm font-medium text-[#0f1a08]/70">
+            code sent to <b className="text-[#0f1a08]">{email}</b>
           </p>
           <CodeBoxes value={code} onChange={setCode} disabled={busy} />
-          <div className="flex gap-3">
-            <PxButton disabled={code.length !== 6 || busy} onClick={verify}>
-              {busy ? "Checking" : "Enter the arena"}
-            </PxButton>
-            <PxButton
-              dark
-              disabled={busy}
-              onClick={() => {
-                setOtp(null);
-                setCode("");
-                setErr("");
-              }}
-            >
-              Change email
-            </PxButton>
-          </div>
+          <button
+            className="w-fit text-sm font-semibold text-[#0f1a08] underline underline-offset-4"
+            disabled={busy}
+            onClick={() => {
+              setOtp(null);
+              setCode("");
+              setErr("");
+            }}
+          >
+            use another email
+          </button>
         </>
       )}
-      <p className="text-center font-mono text-xs leading-5 text-subtext">no password and nothing to install. your account is ready the moment you log in, and every move is free.</p>
-      {err && <p className="text-center font-mono text-sm text-error">{err}</p>}
+      {err && <p className="text-sm font-medium text-[#b3261e]">{err}</p>}
     </div>
   );
 }
 
+type Offer = { title: string; body: string; line: string; art: React.ReactNode; icon: IcoName };
+
 export function Welcome() {
-  const [cards, setCards] = useState<Card[]>([]);
-  useEffect(() => {
-    let alive = true;
-    const load = () =>
-      loadCards()
-        .then((c) => alive && setCards(c))
-        .catch(() => alive && setTimeout(load, 2000));
-    load();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const fable = infoOf(byName("claude-fable-5"));
+  const kimi = infoOf(byName("kimi-k3"));
+  const opus = infoOf(byName("claude-opus-5.5"));
+  const grok = infoOf(byName("grok-4.20"));
+
+  const offers: Offer[] = [
+    {
+      title: "Build a deck",
+      body: "Five real models, six live benchmark stats each. Stay under 1600 power.",
+      line: "Strong cards cost more.",
+      icon: "layers",
+      art: (
+        <div className="relative h-[150px] w-[190px]">
+          {[kimi, opus, fable].map((c, i) => (
+            <div key={c.card.id} className="absolute top-3 left-1/2 origin-bottom" style={{ translate: `calc(-50% + ${(i - 1) * 40}px) ${Math.abs(i - 1) * 8}px`, rotate: `${(i - 1) * 12}deg` }}>
+              <GameCard info={c} size="mini" style={{ fontSize: 5.5 }} />
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      title: "Lock & reveal",
+      body: "Each round picks an arena stat. You both lock a card face down, then flip.",
+      line: "Higher stat wins. Counter types get 10%.",
+      icon: "lock",
+      art: (
+        <div className="bm-card size-mini is-facedown" style={{ fontSize: 6.5, rotate: "-6deg" }}>
+          <div className="inner">
+            <div className="side front" />
+            <CardBack side="mine" commit="0x7557a0c3be12f9e4d8a1c2b3f4e5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c13918" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Live duel",
+      body: "Round three, the two models answer the same prompt. A judge model decides.",
+      line: "Verdict posted onchain.",
+      icon: "energy",
+      art: (
+        <div className="flex items-end gap-1">
+          <img src={artOf(opus.card.name, 3)} alt="" className="pixel h-24 w-24 object-contain" />
+          <span className="mb-8 font-display text-2xl text-[#0f1a08]">VS</span>
+          <img src={artOf(grok.card.name, 1)} alt="" className="pixel h-24 w-24 -scale-x-100 object-contain" />
+        </div>
+      ),
+    },
+  ];
+
+  const scrollToLogin = () => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
   return (
-    <div className="relative min-h-svh bg-[radial-gradient(ellipse_at_50%_-10%,#1e2610_0%,#0d0d10_55%)]">
-      <nav className="fixed top-0 left-0 z-50 w-full bg-bg/70 backdrop-blur-sm">
-        <div className="mx-auto flex h-[72px] max-w-[1236px] items-center justify-between px-5">
-          <Brand />
-          <Ticker tag="LIVE" onClick={() => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
-            15 real models on monad testnet
-          </Ticker>
-          <PxButton dark onClick={() => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" })}>
-            Log in
-          </PxButton>
-        </div>
-      </nav>
+    <div className="min-h-svh bg-[radial-gradient(120%_80%_at_0%_0%,#1f5a1e,#0b1f0e_45%,#07120a)] p-3 md:p-6">
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-[40px] bg-[#050806]">
+        {/* nav */}
+        <header className="relative z-20 flex items-center justify-between px-6 py-6 md:px-10">
+          <span className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl border-2 border-neon/70 font-display text-2xl text-neon">B</span>
+            <span className="font-display text-2xl tracking-[0.12em] text-white">BENCHMON</span>
+          </span>
+          <div className="flex items-center gap-4">
+            {import.meta.env.DEV && (
+              <a href={devUrl("a")} className="hidden text-sm font-semibold text-white/60 hover:text-white sm:block">
+                dev mode
+              </a>
+            )}
+            <button onClick={scrollToLogin} className="h-14 rounded-full border-2 border-neon px-8 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon hover:text-[#050806]">
+              Log in
+            </button>
+          </div>
+        </header>
 
-      <main className="relative flex min-h-svh flex-col items-center overflow-hidden pt-[110px] pb-24">
-        <div className="pixel-field pointer-events-none absolute inset-x-0 bottom-0 h-1/2 [mask-image:linear-gradient(transparent,#000)]" />
-        <h1 className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 px-4 font-display text-[clamp(34px,5.4vw,78px)]">
-          <Word>PICK</Word>
-          <Word lime icon="lock">LOCK</Word>
-          <Word>REVEAL</Word>
-          <Word lime icon="power">WIN</Word>
-        </h1>
+        {/* hero */}
+        <section className="relative -mt-4 h-[560px] md:h-[620px]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-6 bg-cover bg-center text-center font-display leading-[.82] text-transparent select-none"
+            style={{ backgroundImage: "linear-gradient(rgba(10,40,16,.55),rgba(10,40,16,.75)), url(/art/arenas/code@1x.png)", backgroundClip: "text", WebkitBackgroundClip: "text", fontSize: "clamp(120px, 21vw, 330px)", imageRendering: "pixelated" }}
+          >
+            BENCHMON
+          </div>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(40%_50%_at_50%_55%,rgba(184,255,61,.18),transparent_70%)]" />
 
-        <Fan cards={cards} />
+          <span className="absolute top-[18%] right-[10%] rotate-[-8deg] font-display text-[clamp(28px,4vw,56px)] leading-[.9] text-neon/90 drop-shadow-[0_4px_0_rgba(0,0,0,.6)]">
+            REAL
+            <br />
+            MODELS
+          </span>
+          <span className="absolute bottom-[26%] left-[8%] rotate-[-6deg] font-display text-[clamp(24px,3.4vw,48px)] leading-[.9] text-neon/80">
+            LIVE
+            <br />
+            STATS
+          </span>
+          <span className="absolute top-[46%] right-[6%] rotate-[-10deg] font-display text-[clamp(22px,3vw,42px)] leading-[.9] text-white/80">
+            NO
+            <br />
+            BLUFF
+          </span>
 
-        <Frame className="relative mt-16 text-center text-base leading-6 md:text-[17px]">
-          every card is a real ai model with live benchmark stats.
-          <br />
-          build a deck of five, stake on it and let the numbers fight.
-        </Frame>
+          <img src={artOf(fable.card.name, 3)} alt="claude fable 5, a legendary card" className="pixel absolute bottom-[96px] left-1/2 h-[82%] -translate-x-1/2 object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,.6)] lg:left-[40%]" />
+        </section>
 
-        <Login />
-      </main>
+        {/* bottom band */}
+        <section className="relative z-10 -mt-20 grid gap-6 rounded-t-[36px] bg-[#e4e9d6] px-6 pt-10 pb-8 text-[#0f1a08] md:px-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:pb-12">
+          <div className="flex flex-col gap-5">
+            <h1 className="font-display text-[clamp(48px,5.6vw,84px)] leading-[.92] uppercase">
+              Pick. Lock.
+              <br />
+              Win.
+            </h1>
+            <p className="max-w-[40ch] text-lg leading-snug font-medium text-[#0f1a08]/75">A card battle where every card is a real AI model. Stake on your deck, and when a lab ships a new model, the cards change.</p>
+            <Login />
+            <p className="text-xs font-medium text-[#0f1a08]/50">no password, nothing to install, every move is free.</p>
+          </div>
 
-      <footer className="relative border-t border-line px-5 py-5">
-        <div className="mx-auto flex max-w-[1236px] flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-[11px] text-subtext">
-          <span>benchmon · monad metropolis 2026</span>
+          <div className="grid items-start gap-4 sm:grid-cols-3 lg:-mt-40">
+            {offers.map((o) => (
+              <article key={o.title} className="relative flex flex-col items-center rounded-[28px] bg-neon px-5 pt-6 pb-16 text-center shadow-[0_20px_50px_-20px_rgba(0,0,0,.5)]">
+                <div className="grid h-[160px] place-items-center">{o.art}</div>
+                <h2 className="mt-3 font-display text-3xl tracking-wide uppercase">{o.title}</h2>
+                <p className="mt-2 text-[13px] leading-snug font-medium text-[#0f1a08]/80">{o.body}</p>
+                <p className="mt-2 text-[13px] leading-snug font-bold">{o.line}</p>
+                <button onClick={scrollToLogin} className="absolute bottom-0 left-1/2 flex h-12 -translate-x-1/2 items-center gap-2 rounded-t-[22px] bg-[#e4e9d6] px-7 text-sm font-extrabold whitespace-nowrap tracking-wide uppercase">
+                  <Ico name={o.icon} className="h-4 w-4" />
+                  Play now
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 bg-[#e4e9d6] px-6 pb-6 text-xs font-medium text-[#0f1a08]/55 md:px-12">
+          <span>benchmon · monad metropolis 2026 · live on monad testnet</span>
           <span>
             stats: arena (cc-by), openrouter prices · art: lpc artists (cc-by-sa) ·{" "}
-            <a className="underline hover:text-main" href="/art/CREDITS-characters.md" target="_blank" rel="noreferrer">
+            <a className="underline" href="/art/CREDITS-characters.md" target="_blank" rel="noreferrer">
               credits
             </a>
           </span>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

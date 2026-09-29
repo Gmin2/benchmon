@@ -1,14 +1,18 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { logout } from "@dynamic-labs-sdk/client";
 import { Game } from "../Game";
 import { useWallet } from "../useWallet";
 import { DEV, SEAT, devUrl } from "../dev";
 import { short, useBalance } from "../hooks";
-import { Btn, Ico, Panel, type IcoName } from "../ui/kit";
+import { Ico, Panel, type IcoName } from "../ui/kit";
 import { Trade } from "./Trade";
 import { Home } from "./Home";
+import { Decks } from "./Decks";
+import { Play } from "./Play";
+import { Ranks } from "./Ranks";
+import type { Deck } from "../mock";
 
-export type Tab = "home" | "decks" | "play" | "trade" | "ranks";
+export type Tab = "home" | "decks" | "play" | "trade" | "ranks" | "onchain";
 const NAV: { id: Tab; label: string; icon: IcoName }[] = [
   { id: "home", label: "Home", icon: "house-6" },
   { id: "decks", label: "Decks", icon: "layers" },
@@ -19,7 +23,8 @@ const NAV: { id: Tab; label: string; icon: IcoName }[] = [
 
 function readTab(): Tab {
   const h = location.hash.replace(/^#\/?/, "");
-  if (h.startsWith("match/")) return "play";
+  // the plain onchain game stays reachable at #onchain while the new screens run on mock data
+  if (h.startsWith("match/") || h === "onchain") return "onchain";
   return NAV.some((n) => n.id === h) ? (h as Tab) : "home";
 }
 
@@ -61,7 +66,7 @@ function TopBar({ tab }: { tab: Tab }) {
   const { address } = useWallet();
   const balance = useBalance(address);
   const [open, setOpen] = useState(false);
-  const title = NAV.find((n) => n.id === tab)!.label;
+  const title = NAV.find((n) => n.id === tab)?.label ?? "Onchain";
   return (
     <header className="flex h-24 items-center justify-between gap-4">
       <div className="flex items-center gap-3 md:hidden">
@@ -116,19 +121,9 @@ function TopBar({ tab }: { tab: Tab }) {
   );
 }
 
-function Soon({ children, go }: { children: ReactNode; go: (t: Tab) => void }) {
-  return (
-    <Panel className="p-8">
-      <p className="max-w-xl text-mute">{children}</p>
-      <Btn className="mt-6" onClick={() => go("trade")}>
-        Open the trade page
-      </Btn>
-    </Panel>
-  );
-}
-
 export function Shell() {
   const [tab, setTab] = useState<Tab>(readTab);
+  const [preset, setPreset] = useState<Deck | null>(null);
   useEffect(() => {
     const on = () => setTab(readTab());
     addEventListener("hashchange", on);
@@ -145,18 +140,25 @@ export function Shell() {
       <div className="md:pl-[92px]">
         <div className="mx-auto max-w-[1480px] px-5 pb-24 md:px-10">
           <TopBar tab={tab} />
-          {tab === "trade" ? (
-            <Trade />
-          ) : tab === "play" ? (
+          {tab === "onchain" ? (
             <Panel className="p-6">
               <Game />
             </Panel>
+          ) : tab === "trade" ? (
+            <Trade />
+          ) : tab === "play" ? (
+            <Play preset={preset} />
           ) : tab === "home" ? (
             <Home go={go} />
           ) : tab === "decks" ? (
-            <Soon go={go}>collection and deck builder, restyled after the lobby.</Soon>
+            <Decks
+              onPlay={(d) => {
+                setPreset(d);
+                go("play");
+              }}
+            />
           ) : (
-            <Soon go={go}>players by wins and winnings, cards by win rate.</Soon>
+            <Ranks onPlay={() => go("play")} />
           )}
         </div>
       </div>
