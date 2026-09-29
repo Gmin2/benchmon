@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>benchmon card</title>
+<link rel="stylesheet" href="card.css">
+<style>
+  body { margin: 0; background: var(--gray-5); color: var(--gray-95); font-family: "PolySans", system-ui, sans-serif; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-family: "PolySansWide", "PolySans", sans-serif; font-weight: 600; font-size: 28px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-family: "NB Arkitekt", monospace; font-weight: 400; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--gray-70); margin: 56px 0 18px; display: flex; gap: 10px; align-items: center; }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--gray-20); }
+  p.lede { color: var(--gray-70); margin: 0; max-width: 64ch; line-height: 1.5; }
+  .mono { font-family: "NB Arkitekt", monospace; }
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 48px; align-items: start; margin-top: 36px; }
+  .controls { display: grid; gap: 16px; align-content: start; max-width: 520px; }
+  .row { display: grid; gap: 8px; }
+  .row label { font-family: "NB Arkitekt", monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gray-50); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button, select {
+    font: inherit; font-family: "NB Arkitekt", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+    background: var(--gray-15); color: var(--gray-85); border: 1px solid var(--gray-20); border-radius: 99px; padding: 7px 12px; cursor: pointer;
+  }
+  select { border-radius: 10px; padding: 9px 12px; width: 100%; }
+  .seg button.on { background: var(--lime); color: var(--gray-10); border-color: var(--lime); }
+  .seg button:active { transform: scale(.97); }
+  .spec { font-family: "NB Arkitekt", monospace; font-size: 12px; color: var(--gray-50); line-height: 1.7; background: var(--gray-10); border: 1px solid var(--gray-20); border-radius: 12px; padding: 14px 16px; }
+  .spec b { color: var(--gray-85); font-weight: 400; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px 18px; align-items: flex-end; }
+  .cell { display: grid; gap: 10px; justify-items: center; }
+  .cell .cap { font-family: "NB Arkitekt", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--gray-50); text-align: center; }
+  .stage { min-height: 640px; display: grid; place-items: center; padding: 20px 30px; background: radial-gradient(60% 60% at 50% 40%, var(--gray-15), var(--gray-5)); border-radius: 20px; border: 1px solid var(--gray-15); }
+  @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .stage { min-height: 560px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>benchmon card</h1>
+  <p class="lede">every card is a real ai model. stats come from live benchmarks, the art from the lpc pixel pipeline, and both change when a model evolves. move the pointer over a card to tilt it and catch the foil.</p>
+
+  <section class="hero">
+    <div class="stage" id="stage"></div>
+    <div class="controls">
+      <div class="row"><label>card</label><select id="pick"></select></div>
+      <div class="row"><label>art tier</label><div class="seg" id="tier"></div></div>
+      <div class="row"><label>arena stat this round</label><div class="seg" id="arena"></div></div>
+      <div class="row"><label>facing a card of type</label><div class="seg" id="facing"></div></div>
+      <div class="row"><label>state</label><div class="seg" id="state"></div></div>
+      <div class="row"><label>flip</label><div class="seg"><button id="flip">flip card</button></div></div>
+      <div class="spec" id="spec"></div>
+    </div>
+  </section>
+
+  <h2>the collection, by power</h2>
+  <div class="grid" id="collection"></div>
+
+  <h2>rarity</h2>
+  <div class="grid" id="rarity"></div>
+
+  <h2>states in a match</h2>
+  <div class="grid" id="states"></div>
+
+  <h2>sizes</h2>
+  <div class="grid" id="sizes"></div>
+</div>
+
+<script src="data.js"></script>
+<script src="icons.js"></script>
+<script src="card.js"></script>
+<script>
+const { cards, statOrder } = window.BENCHMON
+const byName = Object.fromEntries(cards.map(c => [c.name, c]))
+const ui = { name: "claude-fable-5", tier: null, arena: "code", facing: null, state: null, facedown: false }
+
+function seg(id, values, key, label = v => v ?? "none") {
+  const box = document.getElementById(id)
+  box.innerHTML = values.map(v => `<button data-v="${v ?? ""}">${label(v)}</button>`).join("")
+  box.addEventListener("click", e => {
+    const b = e.target.closest("button")
+    if (!b) return
+    const raw = b.dataset.v
+    ui[key] = raw === "" ? null : key === "tier" ? Number(raw) : raw
+    drawHero()
+  })
+}
+
+function sync(id, key) {
+  document.querySelectorAll(`#${id} button`).forEach(b => b.classList.toggle("on", (b.dataset.v || null) == (ui[key] ?? null)))
+}
+
+function drawHero() {
+  const card = byName[ui.name]
+  const stage = document.getElementById("stage")
+  stage.replaceChildren(renderCard(card, { size: "full", tier: ui.tier ?? undefined, arena: ui.arena, facing: ui.facing, state: ui.state, facedown: ui.facedown }))
+  sync("tier", "tier"); sync("arena", "arena"); sync("facing", "facing"); sync("state", "state")
+  const raw = card.raw
+  document.getElementById("spec").innerHTML = `
+    <b>${card.name}</b> · ${card.lab} · id ${card.id}<br>
+    type <b>${card.type}</b> (highest of reasoning, speed, cost) · beats <b>${BEATS[card.type]}</b><br>
+    power <b>${card.power}</b> · rarity <b>${card.rarity}</b> (legendary 390+, rare 320+)<br>
+    raw: code ${raw.code.toFixed(0)} · math ${raw.math.toFixed(0)} · reasoning ${raw.reasoning.toFixed(0)} arena elo<br>
+    speed ${raw.speed.toFixed(1)} tok/s · cost $${raw.cost.toFixed(2)} per m · honesty ${raw.honesty.toFixed(0)}`
+}
+
+document.getElementById("pick").innerHTML = [...cards].sort((a, b) => b.power - a.power).map(c => `<option value="${c.name}">${c.display} · ${c.power}</option>`).join("")
+document.getElementById("pick").value = ui.name
+document.getElementById("pick").addEventListener("change", e => { ui.name = e.target.value; ui.tier = null; drawHero() })
+seg("tier", [null, 1, 2, 3], "tier", v => (v ? `tier ${v}` : "auto"))
+seg("arena", [null, ...statOrder], "arena")
+seg("facing", [null, "reasoning", "speed", "cost"], "facing")
+seg("state", [null, "selected", "locked", "used", "winner", "loser", "duel", "evolved"], "state")
+document.getElementById("flip").addEventListener("click", () => {
+  ui.facedown = !ui.facedown
+  document.querySelector("#stage .bm-card").classList.toggle("is-facedown", ui.facedown)
+})
+drawHero()
+
+const collection = document.getElementById("collection")
+for (const c of [...cards].sort((a, b) => b.power - a.power)) collection.append(renderCard(c, { size: "hand" }))
+
+const rarity = document.getElementById("rarity")
+for (const [name, cap] of [["mistral-medium-3.5", "common · plain frame"], ["glm-5.3", "rare · silver frame, soft sheen"], ["kimi-k3", "legendary · gold foil, full holo"]]) {
+  const cell = document.createElement("div")
+  cell.className = "cell"
+  cell.append(renderCard(byName[name], { size: "hand" }))
+  cell.insertAdjacentHTML("beforeend", `<div class="cap">${cap}</div>`)
+  rarity.append(cell)
+}
+
+const states = document.getElementById("states")
+const demo = [
+  ["in collection", {}],
+  ["selected", { state: "selected" }],
+  ["over the cap", { state: "locked" }],
+  ["used this match", { state: "used" }],
+  ["face down, committed", { facedown: true }],
+  ["arena stat lit", { arena: "reasoning" }],
+  ["matchup hint", { facing: "speed" }],
+  ["round winner", { state: "winner" }],
+  ["round loser", { state: "loser" }],
+  ["live duel", { state: "duel" }],
+  ["evolved", { state: "evolved", tier: 3 }],
+]
+demo.forEach(([cap, opts], i) => {
+  const cell = document.createElement("div")
+  cell.className = "cell"
+  const name = ["claude-opus-5.5", "gemini-3.8-flash", "claude-fable-5", "hy3", "kimi-k3", "claude-opus-5.5", "claude-opus-5.5", "deepseek-v4.1-flash", "grok-4.20", "gpt-5.6-sol", "mimo-v2.6-pro"][i]
+  cell.append(renderCard(byName[name], { size: "tile", ...opts }))
+  cell.insertAdjacentHTML("beforeend", `<div class="cap">${cap}</div>`)
+  states.append(cell)
+})
+
+const sizes = document.getElementById("sizes")
+for (const [size, cap] of [["full", "full · detail"], ["hand", "hand · in match"], ["tile", "tile · deck builder"], ["mini", "mini · history rows"]]) {
+  const cell = document.createElement("div")
+  cell.className = "cell"
+  cell.append(renderCard(byName["deepseek-v4.1-flash"], { size }))
+  cell.insertAdjacentHTML("beforeend", `<div class="cap">${cap}</div>`)
+  sizes.append(cell)
+}
+</script>
+</body>
+</html>

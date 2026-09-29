@@ -62,7 +62,7 @@ async function render(spec: CardSpec & { lab: string }, tier: 1 | 2 | 3, fam: Fa
     aura(c, "#ffd84a", [240, 140, 60])
     sparkles(c, spec.name)
   }
-  return withMarks(c, spec.lab)
+  return { ...withMarks(c, spec.lab), plain: c }
 }
 
 const index: { line: string; family: string; releases: { name: string; step: number; roster: boolean; next: boolean }[] }[] = []
@@ -80,6 +80,7 @@ for (const line of lineage.lines) {
       for (const tier of [1, 2, 3] as const) {
         const t = await render(spec, tier, fam)
         await save(t.full, join(out, "tiers"), `${release.name}-t${tier}`)
+        await save(t.plain, join(out, "tiers"), `${release.name}-t${tier}-plain`)
         await save(t.bust, join(out, "tiers"), `${release.name}-t${tier}-bust`)
       }
   }
