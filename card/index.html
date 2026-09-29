@@ -31,6 +31,16 @@
   .cell { display: grid; gap: 10px; justify-items: center; }
   .cell .cap { font-family: "NB Arkitekt", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--gray-50); text-align: center; }
   .stage { min-height: 640px; display: grid; place-items: center; padding: 20px 30px; background: radial-gradient(60% 60% at 50% 40%, var(--gray-15), var(--gray-5)); border-radius: 20px; border: 1px solid var(--gray-15); }
+  .arena-stage { position: relative; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; border: 1px solid var(--gray-20); background-size: cover; image-rendering: pixelated; }
+  .arena-stage .bm-card { position: absolute; bottom: 12%; }
+  .arena-stage .bm-card.mine { left: 29%; translate: -50% 0; }
+  .arena-stage .bm-card.theirs { left: 71%; translate: -50% 0; }
+  .arena-stage .banner { position: absolute; top: 4%; left: 50%; translate: -50% 0; display: flex; gap: 10px; align-items: center; padding: 8px 16px; border-radius: 99px; background: rgba(10,10,10,.8); backdrop-filter: blur(6px); font-family: "NB Arkitekt", monospace; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--gray-85); }
+  .arena-stage .banner b { color: var(--lime); font-weight: 700; }
+  .arena-stage .banner .px { width: 16px; height: 16px; color: var(--lime); }
+  .arena-stage .vs { position: absolute; left: 50%; bottom: 36%; translate: -50% 0; font-family: "PolySansWide", sans-serif; font-weight: 600; font-size: 34px; color: var(--gray-95); text-shadow: 0 3px 0 #000, 0 0 20px rgba(0,0,0,.8); }
+  .arena-stage .score { position: absolute; top: 4%; font-family: "NB Arkitekt", monospace; font-size: 13px; padding: 6px 12px; border-radius: 99px; background: rgba(10,10,10,.8); }
+  .arena-stage .score.l { left: 3%; color: var(--lime); } .arena-stage .score.r { right: 3%; color: #ff6b5e; }
   @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .stage { min-height: 560px; } }
 </style>
 </head>
@@ -51,6 +61,10 @@
       <div class="spec" id="spec"></div>
     </div>
   </section>
+
+  <h2>in the arena</h2>
+  <div class="seg" id="arenas" style="margin-bottom:14px"></div>
+  <div class="arena-stage" id="arenaStage"></div>
 
   <h2>the collection, by power</h2>
   <div class="grid" id="collection"></div>
@@ -187,6 +201,22 @@ document.getElementById("lockall").addEventListener("click", () => {
   if (next) lockIn(next)
 })
 document.getElementById("resetall").addEventListener("click", dealHand)
+
+const ARENA_TITLES = { code: "server room", math: "chalk hall", reasoning: "library", speed: "night track", cost: "market", honesty: "court" }
+let arenaPick = "code"
+function drawArena() {
+  const stage = document.getElementById("arenaStage")
+  stage.style.backgroundImage = `url(../arena/out/${arenaPick}@4x.png)`
+  const mine = renderCard(byName["claude-opus-5.5"], { size: "hand", arena: arenaPick, facing: byName["grok-4.20"].type, state: "winner" })
+  const theirs = renderCard(byName["grok-4.20"], { size: "hand", arena: arenaPick, facing: byName["claude-opus-5.5"].type, state: "loser" })
+  mine.classList.add("mine"); theirs.classList.add("theirs")
+  stage.replaceChildren(mine, theirs)
+  stage.insertAdjacentHTML("beforeend", `<div class="banner">${icon(arenaPick)}arena <b>${arenaPick}</b> · ${ARENA_TITLES[arenaPick]}</div><div class="vs">VS</div><div class="score l">you 2</div><div class="score r">1 them</div>`)
+  document.querySelectorAll("#arenas button").forEach(b => b.classList.toggle("on", b.dataset.v === arenaPick))
+}
+document.getElementById("arenas").innerHTML = statOrder.map(k => `<button data-v="${k}">${k} · ${ARENA_TITLES[k]}</button>`).join("")
+document.getElementById("arenas").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { arenaPick = b.dataset.v; drawArena() } })
+drawArena()
 
 const sizes = document.getElementById("sizes")
 for (const [size, cap] of [["full", "full · detail"], ["hand", "hand · in match"], ["tile", "tile · deck builder"], ["mini", "mini · history rows"]]) {

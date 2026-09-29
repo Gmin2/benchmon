@@ -1,0 +1,7 @@
+{
+  "name": "benchmon-arena",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "bun src/build.ts" },
+  "dependencies": { "sharp": "^0.35.5" }
+}
