@@ -193,7 +193,7 @@ export function DuelPanel({ arena, duel, oppName, judging }: { arena: number; du
       {!duel ? (
         <div className="flex items-center gap-3 rounded-2xl bg-panel-2 p-4 text-mute">
           <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-neon" />
-          {judging ? `both models got the same ${ARENAS[arena]} prompt and are answering…` : "the transcript is not in yet"}
+          {judging ? `both models got the same ${ARENAS[arena]} prompt and are answering…` : "no transcript, the judge did not answer in time so this round was settled on the card stats"}
         </div>
       ) : (
         <div className="rounded-2xl bg-panel-2 p-4">

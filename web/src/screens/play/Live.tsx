@@ -218,6 +218,8 @@ export function Live({ id }: { id: bigint }) {
   const over = m.state === 2;
   const final = over ? (m.result === 3 ? "draw" : (m.result === 1) === isA ? "win" : "loss") : null;
   const lastRow = rows[rows.length - 1];
+  // after a round settles the struct already holds the next, random arena, so show the one that was played
+  const arena = shown ? shown.arena : over && lastRow ? lastRow.arena : m.arena;
 
   const pick = address ? loadPick(id, m.round, address as Address) : null;
   const iMoved = theirCommit === ZERO32 ? myCommit !== ZERO32 : myRevealed;
@@ -269,8 +271,8 @@ export function Live({ id }: { id: bigint }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Scoreboard pending={picking} me={me} opp={opp} winsMe={winsMe} winsThem={winsThem} round={m.round} arena={m.arena} pot={Number(formatEther(m.stake * 2n))} clock={playing && left > 0 && !picking ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : null} />
-      <Table arena={m.arena} status={status} tone={tone} oppName={opp.handle} mine={mineSlot} theirs={theirSlot} overlay={overlay} />
+      <Scoreboard pending={picking} me={me} opp={opp} winsMe={winsMe} winsThem={winsThem} round={m.round} arena={arena} pot={Number(formatEther(m.stake * 2n))} clock={playing && left > 0 && !picking ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : null} />
+      <Table arena={arena} status={status} tone={tone} oppName={opp.handle} mine={mineSlot} theirs={theirSlot} overlay={overlay} />
 
       {err && (
         <Panel className="flex items-center justify-between gap-3 border border-down/40 p-4 text-sm">
