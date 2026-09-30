@@ -120,3 +120,4 @@
 @keyframes float { 50% { transform: translateY(-14px); } }
 @keyframes spin-slow { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { [class*="animate-[float"], [class*="animate-[spin-slow"] { animation: none !important; } }
+@keyframes hero-in { from { opacity: 0; transform: translateY(24px) scale(.92); } }

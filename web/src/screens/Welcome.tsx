@@ -5,6 +5,7 @@ import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
 import { Pixel, ICONS } from "../ui/pixel";
 import { Login } from "./landing/Login";
+import { RailIcon } from "../ui/railIcons";
 
 // film grain over everything, the reference's printed look
 function Grain({ opacity = 0.22 }: { opacity?: number }) {
@@ -88,10 +89,16 @@ export function Welcome() {
     return () => removeEventListener("keydown", k);
   }, []);
 
-  const fable = infoOf(byName("claude-fable-5"));
-  const kimi = infoOf(byName("kimi-k3"));
-  const opus = infoOf(byName("claude-opus-5.5"));
-  const deep = infoOf(byName("deepseek-v4.1-flash"));
+  const heroes = ["kimi-k3", "claude-opus-5.5", "deepseek-v4.1-flash"].map((n) => infoOf(byName(n)));
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setH((x) => (x + 1) % heroes.length), 3800);
+    return () => clearInterval(t);
+  }, [heroes.length]);
+  const hero = heroes[h]!;
+  const kimi = infoOf(byName("gemini-3.8-flash"));
+  const opus = infoOf(byName("claude-fable-5"));
+  const deep = infoOf(byName("grok-4.20"));
   const gem = (color: string) => <Pixel grid={ICONS.gem} colors={{ "1": color, "2": "#ffffff" }} className="h-full w-full" />;
   const back = (side: "mine" | "theirs") => (
     <div className="bm-card size-mini is-facedown" style={{ fontSize: 4.5 }}>
@@ -120,11 +127,11 @@ export function Welcome() {
     <div className="relative h-svh overflow-hidden bg-[#08080a] text-white">
       {/* nav */}
       <header className="relative z-30 mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5">
-        <span className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-white font-display text-sm text-black">B</span>
-          Benchmon
+        <span className="flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-neon font-display text-xl text-bg">B</span>
+          <span className="font-display text-2xl tracking-[0.1em]">BENCHMON</span>
         </span>
-        <nav className="hidden gap-8 text-[14px] text-white/75 md:flex">
+        <nav className="hidden gap-8 text-[15px] font-semibold text-white/70 md:flex">
           {["About", "Cards", "Ranks", "Docs"].map((l) => (
             <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white">
               {l}
@@ -137,43 +144,47 @@ export function Welcome() {
           )}
         </nav>
         <div className="flex gap-2">
-          <button onClick={() => setOpen(true)} className="h-10 rounded-xl border border-white/40 px-4 text-[14px] font-medium transition hover:border-white">
+          <button onClick={() => setOpen(true)} className="hidden h-12 rounded-full border-2 border-neon/70 px-6 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10 sm:block">
             Try for free
           </button>
-          <button onClick={() => setOpen(true)} className="h-10 rounded-xl bg-white px-4 text-[14px] font-semibold text-black transition hover:bg-white/90">
+          <button onClick={() => setOpen(true)} className="h-12 rounded-full bg-neon px-6 text-sm font-extrabold tracking-wide text-bg uppercase transition hover:bg-neon-hi">
             Log in
           </button>
         </div>
       </header>
 
       {/* hero copy */}
-      <section className="relative z-20 mx-auto flex max-w-[900px] flex-col items-center px-6 pt-10 text-center md:pt-14">
-        <button onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-full border border-white/25 bg-white/5 py-1 pr-3 pl-1 text-[13px] text-white/85 transition hover:bg-white/10">
-          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-black">New</span>
+      <section className="relative z-20 mx-auto flex max-w-[1000px] flex-col items-center px-6 pt-6 text-center md:pt-8">
+        <button onClick={() => setOpen(true)} className="flex items-center gap-2 rounded-full border border-neon/40 bg-neon/10 py-1 pr-3 pl-1 text-[13px] font-semibold text-neon transition hover:bg-neon/15">
+          <span className="rounded-full bg-neon px-2 py-0.5 text-[11px] font-extrabold text-bg uppercase">New</span>
           Claude Fable 6 card preview
           <span aria-hidden>→</span>
         </button>
-        <h1 className="mt-6 text-[48px] leading-[1.02] font-semibold tracking-[-0.035em] md:text-[76px]">
+        <h1 className="mt-5 font-display text-[clamp(52px,min(8vw,13svh),112px)] leading-[.88] uppercase drop-shadow-[0_6px_0_rgba(0,0,0,.5)]">
           Pick the model
           <br />
-          Chase the win
+          <span className="text-neon">Chase the win</span>
         </h1>
-        <p className="mt-5 text-[16px] text-white/60 md:text-[17px]">Every card is a real AI model. Build a deck, stake on it and battle for the pot.</p>
-        <div className="mt-8 flex gap-2">
-          <button onClick={() => setOpen(true)} className="h-11 rounded-xl border border-white/40 px-5 text-[14px] font-medium transition hover:border-white">
+        <p className="mt-5 text-[16px] font-medium text-white/65 md:text-[18px]">Every card is a real AI model. Build a deck, stake on it and battle for the pot.</p>
+        <div className="pointer-events-auto mt-8 flex gap-3">
+          <button onClick={() => setOpen(true)} className="flex h-14 items-center gap-2 rounded-full bg-neon px-8 text-[15px] font-extrabold tracking-wide text-bg uppercase shadow-[0_12px_40px_-10px_rgba(184,255,61,.7)] transition hover:bg-neon-hi active:scale-[.98]">
+            <RailIcon name="play" className="h-6 w-6" cutColor="#b8ff3d" />
             Play for free
           </button>
-          <a href="#cards" className="grid h-11 place-items-center rounded-xl bg-white px-6 text-[14px] font-semibold text-black transition hover:bg-white/90">
+          <a href="#cards" className="grid h-14 place-items-center rounded-full border-2 border-neon/70 bg-[#08080a]/85 px-8 text-[15px] font-extrabold tracking-wide text-neon uppercase backdrop-blur transition hover:bg-[#15180d]">
             Explore
           </a>
         </div>
       </section>
 
       {/* the scene */}
-      <section className="pointer-events-none absolute inset-x-0 bottom-0 h-[56svh]">
+      <section className="pointer-events-none absolute inset-x-0 bottom-0 h-[50svh]">
         <Flames />
         <Table />
-        <img src={artOf(fable.card.name, 3)} alt="claude fable 5, legendary" className="pixel absolute bottom-[2%] left-1/2 h-[58%] -translate-x-1/2 object-contain drop-shadow-[0_24px_30px_rgba(0,0,0,.55)]" />
+        <img key={hero.card.name} src={artOf(hero.card.name, 3)} alt={`${hero.display}, legendary`} className="pixel absolute bottom-[2%] left-1/2 h-[58%] -translate-x-1/2 animate-[hero-in_.5s_cubic-bezier(.2,.7,.2,1)_both] object-contain drop-shadow-[0_24px_30px_rgba(0,0,0,.55)]" />
+        <span key={`${hero.card.name}-tag`} className="absolute bottom-[4%] left-1/2 -translate-x-1/2 animate-[fadein_.5s_ease_both] rounded-full bg-black/70 px-4 py-1.5 text-sm font-bold whitespace-nowrap backdrop-blur">
+          {hero.display} <span className="text-neon">· {hero.power}</span>
+        </span>
         {floaters.map((f, i) => (
           <div key={i} className="absolute animate-[float_6s_ease-in-out_infinite]" style={{ left: f.x, top: f.y, rotate: `${f.r}deg`, animationDelay: `-${f.d}s` }}>
             {f.el}
@@ -193,7 +204,7 @@ export function Welcome() {
             <button onClick={() => setOpen(false)} aria-label="close" className="absolute top-4 right-4 grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white">
               ✕
             </button>
-            <h2 className="text-2xl font-semibold tracking-tight">Start playing</h2>
+            <h2 className="font-display text-4xl uppercase">Start <span className="text-neon">playing</span></h2>
             <p className="mt-1 mb-5 text-sm text-white/55">Enter your email, we send a 6 digit code. No password, no wallet setup, every move is free.</p>
             <Login />
           </div>
