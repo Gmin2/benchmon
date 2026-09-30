@@ -128,8 +128,8 @@ export function Welcome() {
       {/* nav */}
       <header className="relative z-30 mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5">
         <span className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-neon font-display text-xl text-bg">B</span>
-          <span className="font-display text-2xl tracking-[0.1em]">BENCHMON</span>
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-neon text-lg font-extrabold text-bg">B</span>
+          <span className="text-[21px] font-bold tracking-tight">Benchmon</span>
         </span>
         <nav className="hidden gap-8 text-[15px] font-semibold text-white/70 md:flex">
           {["About", "Cards", "Ranks", "Docs"].map((l) => (
@@ -160,7 +160,7 @@ export function Welcome() {
           Claude Fable 6 card preview
           <span aria-hidden>→</span>
         </button>
-        <h1 className="mt-5 font-display text-[clamp(52px,min(8vw,13svh),112px)] leading-[.88] uppercase drop-shadow-[0_6px_0_rgba(0,0,0,.5)]">
+        <h1 className="mt-6 text-[clamp(46px,min(6.4vw,10.5svh),84px)] leading-[1.02] font-semibold tracking-[-0.04em]">
           Pick the model
           <br />
           <span className="text-neon">Chase the win</span>
@@ -204,7 +204,7 @@ export function Welcome() {
             <button onClick={() => setOpen(false)} aria-label="close" className="absolute top-4 right-4 grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white">
               ✕
             </button>
-            <h2 className="font-display text-4xl uppercase">Start <span className="text-neon">playing</span></h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Start playing</h2>
             <p className="mt-1 mb-5 text-sm text-white/55">Enter your email, we send a 6 digit code. No password, no wallet setup, every move is free.</p>
             <Login />
           </div>
