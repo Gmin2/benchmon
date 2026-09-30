@@ -141,4 +141,3 @@ export function Login({ tone = "dark", cta = "Start playing", className = "" }: 
   );
 }
 
-export const scrollToLogin = () => document.getElementById("login")?.scrollIntoView({ behavior: "smooth", block: "center" });

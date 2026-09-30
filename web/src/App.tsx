@@ -1,9 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { DEV } from "./dev";
-import { Game } from "./Game";
 import { Logo } from "./ui/brand";
-import { Panel } from "./ui/kit";
 import { Decks } from "./screens/Decks";
 import { Home } from "./screens/Home";
 import { Play } from "./screens/Play";
@@ -34,15 +32,6 @@ export default function App() {
         <Route path="/play/:id" element={<Play />} />
         <Route path="/trade" element={<Trade />} />
         <Route path="/ranks" element={<Ranks />} />
-        {/* the plain onchain game, kept while the screens above run on mock data */}
-        <Route
-          path="/onchain"
-          element={
-            <Panel className="p-6">
-              <Game />
-            </Panel>
-          }
-        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -51,7 +51,7 @@ function TopBar() {
   const balance = useBalance(address);
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
-  const title = NAV.find((n) => pathname.startsWith(n.to))?.label ?? "Onchain";
+  const title = NAV.find((n) => pathname.startsWith(n.to))?.label ?? "";
   return (
     <header className="flex h-24 items-center justify-between gap-4">
       <div className="md:hidden">
@@ -80,9 +80,6 @@ function TopBar() {
         {open && (
           <div className="absolute top-16 right-0 z-50 w-80 rounded-3xl border border-line bg-panel p-3 shadow-2xl">
             <div className="rounded-2xl bg-panel-2 p-3 text-xs break-all text-mute">{address}</div>
-            <NavLink to="/onchain" onClick={() => setOpen(false)} className="mt-2 block rounded-2xl px-3 py-3 text-sm hover:bg-panel-2">
-              Onchain game (beta)
-            </NavLink>
             {DEV ? (
               <>
                 <p className="px-2 pt-2 text-xs leading-5 text-mute">
