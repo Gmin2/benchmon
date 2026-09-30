@@ -5,6 +5,7 @@ import { Logo } from "./ui/brand";
 import { Decks } from "./screens/Decks";
 import { Home } from "./screens/Home";
 import { Play } from "./screens/Play";
+import { ProfilePage } from "./screens/ProfilePage";
 import { Ranks } from "./screens/Ranks";
 import { Shell } from "./screens/Shell";
 import { Trade } from "./screens/Trade";
@@ -32,7 +33,10 @@ export default function App() {
         <Route path="/play/:id" element={<Play />} />
         <Route path="/trade" element={<Trade />} />
         <Route path="/ranks" element={<Ranks />} />
+        {authed && <Route path="/:at" element={<ProfilePage />} />}
       </Route>
+      {/* shared profile links work for anyone, logged in or not */}
+      {!authed && <Route path="/:at" element={<ProfilePage standalone />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

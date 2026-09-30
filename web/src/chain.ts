@@ -68,7 +68,8 @@ export function loadPick(id: bigint, round: number, player: Address): { card: nu
   return v ? JSON.parse(v) : null;
 }
 
-export const BACKEND = "http://localhost:8788";
+// the backend: reveals, live duels, profiles. set VITE_BACKEND_URL once it is hosted
+export const BACKEND = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8788";
 
 // hand the pick to the backend so it can reveal even if this tab is closed or in the background
 export async function sendPick(id: bigint, round: number, player: Address, card: number, salt: Hex) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { logout } from "@dynamic-labs-sdk/client";
 import { useWallet } from "../useWallet";
@@ -7,7 +7,7 @@ import { short, useBalance } from "../hooks";
 import { Logo } from "../ui/brand";
 import { Ico } from "../ui/kit";
 import { RailIcon, type RailIconName } from "../ui/railIcons";
-import { useMe } from "../profile";
+import { siteHost, syncProfile, useMe } from "../profile";
 import { Onboarding } from "./Onboarding";
 
 const NAV: { to: string; label: string; icon: RailIconName }[] = [
@@ -51,7 +51,8 @@ function TopBar() {
   const balance = useBalance(address);
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
-  const title = NAV.find((n) => pathname.startsWith(n.to))?.label ?? "";
+  const { profile } = useMe();
+  const title = NAV.find((n) => pathname.startsWith(n.to))?.label ?? (pathname.startsWith("/@") ? "Player" : "");
   return (
     <header className="flex h-24 items-center justify-between gap-4">
       <div className="md:hidden">
@@ -65,11 +66,11 @@ function TopBar() {
           </span>
         )}
         <button onClick={() => setOpen((o) => !o)} className="flex h-14 items-center gap-3 rounded-full bg-panel pr-5 pl-2 transition hover:bg-panel-2">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-neon/15 text-neon">
-            <Ico name="user-3" className="h-5 w-5" />
+          <span className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-neon/15 text-neon">
+            {profile ? <img src={`/art/classes/${profile.cls}-${profile.body}-rookie-bust@1x.png`} alt="" className="pixel h-full w-full object-cover" /> : <Ico name="user-3" className="h-5 w-5" />}
           </span>
           <span className="text-left">
-            <span className="block text-[15px] font-semibold">{address ? short(address) : "setting up"}</span>
+            <span className="block text-[15px] font-semibold">{profile ? `@${profile.username}` : address ? short(address) : "setting up"}</span>
             <span className="block text-xs text-mute">{balance.toFixed(3)} MON</span>
           </span>
           <Ico name="chevron-down" className="h-4 w-4 text-mute" />
@@ -80,6 +81,11 @@ function TopBar() {
         {open && (
           <div className="absolute top-16 right-0 z-50 w-80 rounded-3xl border border-line bg-panel p-3 shadow-2xl">
             <div className="rounded-2xl bg-panel-2 p-3 text-xs break-all text-mute">{address}</div>
+            {profile && (
+              <NavLink to={`/@${profile.username}`} onClick={() => setOpen(false)} className="mt-2 block rounded-2xl px-3 py-3 text-sm hover:bg-panel-2">
+                My page · {siteHost}/@{profile.username}
+              </NavLink>
+            )}
             {DEV ? (
               <>
                 <p className="px-2 pt-2 text-xs leading-5 text-mute">
@@ -107,10 +113,19 @@ function TopBar() {
 }
 
 export function Shell() {
-  const { profile } = useMe();
+  const { address, kernel } = useWallet();
+  const { status } = useMe();
+  const [onboarding, setOnboarding] = useState(false);
+  // once the smart account is known, look up its profile; no profile means first login
+  useEffect(() => {
+    if (address) syncProfile(address);
+  }, [address]);
+  useEffect(() => {
+    if (status === "none") setOnboarding(true);
+  }, [status]);
   return (
     <div className="min-h-svh bg-app">
-      {!profile && <Onboarding />}
+      {onboarding && <Onboarding wallet={kernel} onClose={() => setOnboarding(false)} />}
       <Rail />
       <div className="md:pl-[92px]">
         <div className="mx-auto max-w-[1480px] px-5 pb-24 md:px-10">

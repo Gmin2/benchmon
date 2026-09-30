@@ -5,6 +5,7 @@ import { DECK_CAP, byId, type Deck } from "../mock";
 import { ZERO, isMine, joinMatch, myActive, openSeats, quickMatch, type AnyWrite, type OpenSeat } from "../duel";
 import { useBalance, usePoll } from "../hooks";
 import { useWallet } from "../useWallet";
+import { useProfiles } from "../profile";
 import { GameCard } from "../ui/Card";
 import { Btn, Chip, Ico, Panel } from "../ui/kit";
 import { infoOf } from "../ui/meta";
@@ -41,10 +42,11 @@ function DeckFan({ cards }: { cards: number[] }) {
 }
 
 function SeatRow({ s, me, action }: { s: OpenSeat; me?: string; action: React.ReactNode }) {
+  const profileOf = useProfiles([s.m.a, s.m.b]);
   const mineOpen = s.m.state === 0 && isMine(s.m, me);
   // the other player: the host of an open seat, or whoever sits across from me
   const other = s.m.state === 0 || s.m.b === ZERO ? s.m.a : s.m.a.toLowerCase() === me?.toLowerCase() ? s.m.b : s.m.a;
-  const face = faceOf(other);
+  const face = faceOf(other, profileOf(other));
   return (
     <Panel className="flex items-center gap-4 p-4">
       <Avatar p={face} size="h-14 w-14" />

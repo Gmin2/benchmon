@@ -4,6 +4,7 @@ import { duelAbi } from "./abi";
 import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
 import { houseLoop } from "./house";
+import { checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 
 const cors = {
@@ -22,6 +23,26 @@ const server = Bun.serve({
       if (typeof p === "string") return Response.json({ ok: false, error: p }, { status: 400, headers: cors });
       const err = await addPick(p);
       return Response.json(err ? { ok: false, error: err } : { ok: true }, { status: err ? 400 : 200, headers: cors });
+    }
+    // player profiles: claim a username, look one up by name or address, check if a name is free
+    if (url.pathname === "/profile" && req.method === "POST") {
+      const r = await claim(await req.json().catch(() => null));
+      return typeof r === "string" ? Response.json({ ok: false, error: r }, { status: 400, headers: cors }) : Response.json({ ok: true, profile: r }, { headers: cors });
+    }
+    const prof = url.pathname.match(/^\/profile\/(@?[\w.]+)$/);
+    if (prof) {
+      const key = prof[1]!;
+      const p = key.startsWith("@") ? profileByName(key.slice(1)) : profileOf(key);
+      return p ? Response.json(p, { headers: cors }) : Response.json({ error: "no profile" }, { status: 404, headers: cors });
+    }
+    if (url.pathname === "/profiles") {
+      const list = (url.searchParams.get("addresses") ?? "").split(",").filter(Boolean).slice(0, 50);
+      return Response.json(list.map(profileOf).filter(Boolean), { headers: cors });
+    }
+    const name = url.pathname.match(/^\/username\/([^/]+)$/);
+    if (name) {
+      const err = checkName(decodeURIComponent(name[1]!).toLowerCase(), url.searchParams.get("for") ?? undefined);
+      return Response.json({ free: !err, reason: err }, { headers: cors });
     }
     // the card stats the chainlink workflow reads, built by scripts/stats.ts
     if (url.pathname === "/stats") {
@@ -92,6 +113,7 @@ watchLiveDuels(handle);
 catchUp().catch((e) => console.error(`catch up failed: ${(e as Error).message.split("\n")[0]}`));
 
 await loadPicks();
+await loadProfiles();
 relayLoop();
 // HOUSE=0 runs the backend without seeding markets
 if (process.env.HOUSE !== "0") houseLoop();

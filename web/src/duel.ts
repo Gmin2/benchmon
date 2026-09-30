@@ -219,3 +219,21 @@ export const cancelMatch = (write: AnyWrite, id: bigint) => duel(write, "cancel"
 export const withdraw = (write: AnyWrite) => duel(write, "withdraw", [], GAS.withdraw);
 
 export type { AnyWrite };
+
+// every match an address played among the recent ones, newest first, with its record
+export async function matchesOf(who: string, scan = 80) {
+  const count = await pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "matchCount" });
+  const ids: bigint[] = [];
+  for (let i = count - 1n; i >= 0n && ids.length < scan; i--) ids.push(i);
+  const all = await Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
+  const mine = all.filter((x) => isMine(x.m, who) && x.m.b !== ZERO);
+  const side = (m: Match) => (m.a.toLowerCase() === who.toLowerCase() ? 1 : 2);
+  const done = mine.filter((x) => x.m.state === 2);
+  const wins = done.filter((x) => x.m.result === side(x.m)).length;
+  const draws = done.filter((x) => x.m.result === 3).length;
+  // net: stakes won minus stakes lost
+  const net = done.reduce((a, x) => (x.m.result === side(x.m) ? a + x.m.stake : x.m.result === 3 ? a : a - x.m.stake), 0n);
+  return { matches: mine, wins, losses: done.length - wins - draws, draws, net, side };
+}
+
+export const rankOf = (wins: number) => (wins >= 50 ? "champion" : wins >= 25 ? "ace" : wins >= 10 ? "trainer" : "rookie");

@@ -12,8 +12,9 @@ export const best = (cards: number[], arena: number) => cards.reduce((b, id) => 
 
 export type Face = Pick<Player, "handle" | "cls" | "body" | "rank">;
 
-// a stranger onchain has no profile yet, so their look comes from their address
-export function faceOf(address: string): Face {
+// a player with a profile shows their username and look; a stranger gets a look from their address
+export function faceOf(address: string, p?: { username: string; cls: string; body: "male" | "female" } | null): Face {
+  if (p) return { handle: p.username, cls: p.cls as Face["cls"], body: p.body, rank: "rookie" };
   const n = parseInt(address.slice(2, 10), 16) || 0;
   return { handle: `${address.slice(0, 6)}…${address.slice(-4)}`, cls: CLASSES[n % CLASSES.length]!.cls as Face["cls"], body: n & 1 ? "female" : "male", rank: "rookie" };
 }

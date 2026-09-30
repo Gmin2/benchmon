@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { formatEther, type Address } from "viem";
 import { loadPick } from "../../chain";
 import { ZERO, ZERO32, cancelMatch, claimTimeout, joinMatch, loadTranscript, lockCard, offerOf, pickArena, pickerOf, revealMine, settleByStats, skipPick, useMatch, withdraw, type AnyWrite, type Transcript } from "../../duel";
-import { useMe } from "../../profile";
+import { useMe, useProfiles } from "../../profile";
 import { useWallet } from "../../useWallet";
 import { Btn, Ico, Panel } from "../../ui/kit";
 import { loadDecks } from "../Decks";
@@ -64,6 +64,7 @@ export function Live({ id }: { id: bigint }) {
   const { address, write, ready } = useWallet();
   const w = write as unknown as AnyWrite;
   const { m, rounds, owed } = useMatch(id, address);
+  const profileOf = useProfiles(m ? [m.a, m.b] : []);
   const now = useNow();
   const [sel, setSel] = useState<number | null>(null);
   const [busy, setBusy] = useState("");
@@ -222,7 +223,7 @@ export function Live({ id }: { id: bigint }) {
       </Panel>
     );
 
-  const opp = faceOf(isA ? m.b : m.a);
+  const opp = faceOf(isA ? m.b : m.a, profileOf(isA ? m.b : m.a));
   const winsMe = isA ? m.winsA : m.winsB;
   const winsThem = isA ? m.winsB : m.winsA;
   const deck = bitsToIds(isA ? m.deckA : m.deckB);
