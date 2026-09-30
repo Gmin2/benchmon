@@ -26,19 +26,6 @@
   --font-display: "Anton", "Jakarta", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --radius-panel: 24px;
-
-  /* old names still used by the welcome screen until it is redone */
-  --color-primary: #b8ff3d;
-  --color-primary-hi: #d6ff85;
-  --color-primary-deep: #203306;
-  --color-background: #1e1f23;
-  --color-secondary-bg: #16171a;
-  --color-subcolor: #1e1f23;
-  --color-shade: #26272c;
-  --color-highlight: #2d2e34;
-  --color-main: #f4f5f7;
-  --color-subtext: #8b8d94;
-  --color-error: #ff5d5d;
 }
 
 /* names the card stylesheet reads */
@@ -72,51 +59,10 @@
 .ico > svg { width: 100%; height: 100%; }
 .glow-neon { box-shadow: 0 10px 40px -12px rgba(184, 255, 61, 0.55); }
 
-/* legacy welcome styles, removed when the welcome screen is redone */
 .pixel { image-rendering: pixelated; }
 
-/* the pixel button: stepped corners, lime gradient, a dark 4px drop that presses in */
-.pxwrap { filter: drop-shadow(0 4px 0 var(--color-primary-deep)); padding-bottom: 4px; transition: transform 70ms, filter 70ms; }
-.pxwrap:hover { filter: drop-shadow(0 5px 0 var(--color-primary-deep)) brightness(1.05); transform: translateY(-1px); }
-.pxwrap:active { filter: drop-shadow(0 0 0 var(--color-primary-deep)); transform: translateY(4px); }
-.pxwrap:disabled { opacity: .45; pointer-events: none; }
-.pxbtn {
-  height: 47px; color: var(--color-bg);
-  background: linear-gradient(#e8ffa3 0%, #cdf462 100%);
-  box-shadow: inset 0 -2px 0 rgba(160, 200, 60, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.4);
-  clip-path: polygon(8px 0, calc(100% - 8px) 0, calc(100% - 8px) 2px, calc(100% - 5px) 2px, calc(100% - 5px) 4px, calc(100% - 2px) 4px, calc(100% - 2px) 7px, 100% 7px, 100% 40px, calc(100% - 2px) 40px, calc(100% - 2px) 43px, calc(100% - 5px) 43px, calc(100% - 5px) 45px, calc(100% - 8px) 45px, calc(100% - 8px) 47px, 8px 47px, 8px 45px, 5px 45px, 5px 43px, 2px 43px, 2px 40px, 0 40px, 0 7px, 2px 7px, 2px 4px, 5px 4px, 5px 2px, 8px 2px);
-}
-.pxwrap.dark .pxbtn { background: var(--color-shade); color: var(--color-main); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08); }
-.pxwrap.dark { filter: drop-shadow(0 4px 0 #0b0b0d); }
-.text-shadow { text-shadow: 0 1px rgba(0, 0, 0, 0.35); }
-
-/* small stepped corners for panels and inputs */
-.px-corners { clip-path: polygon(6px 0, calc(100% - 6px) 0, calc(100% - 6px) 2px, calc(100% - 4px) 2px, calc(100% - 4px) 4px, calc(100% - 2px) 4px, calc(100% - 2px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 2px) calc(100% - 6px), calc(100% - 2px) calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) calc(100% - 2px), calc(100% - 6px) calc(100% - 2px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 2px), 4px calc(100% - 2px), 4px calc(100% - 4px), 2px calc(100% - 4px), 2px calc(100% - 6px), 0 calc(100% - 6px), 0 6px, 2px 6px, 2px 4px, 4px 4px, 4px 2px, 6px 2px); }
-
-/* the dotted pixel field behind the pages */
-.pixel-field { background-image: radial-gradient(rgba(205, 244, 98, 0.14) 1px, transparent 1.5px); background-size: 6px 6px; }
-
-/* the fanned hand on the home page, cards lift on hover */
-.fan-card {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform-origin: 50% 110%;
-  translate: calc(-50% + var(--x)) var(--y);
-  rotate: var(--r);
-  transition: translate .25s cubic-bezier(.2, .7, .2, 1);
-  animation: fan-in .6s cubic-bezier(.2, .7, .2, 1) both;
-  animation-delay: calc(var(--n) * 70ms);
-}
-.fan-card:hover { translate: calc(-50% + var(--x)) calc(var(--y) - 22px); }
-@keyframes fan-in { from { opacity: 0; translate: -50% 60px; rotate: 0deg; } }
-@media (prefers-reduced-motion: reduce) { .fan-card { animation: none; transition: none; } }
-
-/* landing animations */
-@keyframes wall-up { from { transform: translateY(0); } to { transform: translateY(-50%); } }
-@keyframes wall-down { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+/* animations */
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { [class*="animate-[wall"] { animation: none !important; } }
 @keyframes float { 50% { transform: translateY(-14px); } }
 @keyframes spin-slow { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { [class*="animate-[float"], [class*="animate-[spin-slow"] { animation: none !important; } }

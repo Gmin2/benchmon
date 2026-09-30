@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CARD_RECORDS, ME, PLAYERS, avatarOf, byName, type Player } from "../mock";
 import { MARKS } from "../ui/generated";
 import { Btn, Chip, Ico, Panel, Seg } from "../ui/kit";
@@ -127,7 +128,9 @@ function CardsTable() {
   );
 }
 
-export function Ranks({ onPlay }: { onPlay: () => void }) {
+export function Ranks() {
+  const nav = useNavigate();
+  const onPlay = () => nav("/play");
   const [view, setView] = useState<(typeof VIEWS)[number]>("Players");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("season");
   const myPlace = PLAYERS.filter((p) => p.wins > ME.wins).length + 1;

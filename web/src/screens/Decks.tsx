@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DECK_CAP, ROSTER, STARTER_DECKS, byId, type Deck } from "../mock";
 import { GameCard } from "../ui/Card";
 import { MARKS } from "../ui/generated";
@@ -76,7 +77,9 @@ function Slot({ info, onRemove, index }: { info?: CardInfo; onRemove: () => void
   );
 }
 
-export function Decks({ onPlay }: { onPlay: (deck: Deck) => void }) {
+export function Decks() {
+  const nav = useNavigate();
+  const onPlay = (deck: Deck) => nav("/play", { state: { deck } });
   const [decks, setDecks] = useState<Deck[]>(loadDecks);
   const [active, setActive] = useState(decks[0]!.id);
   const [type, setType] = useState<(typeof TYPES)[number]>("all");

@@ -4,9 +4,9 @@ const svgs = import.meta.glob("./icons/*.svg", { query: "?raw", import: "default
 const ICONS = Object.fromEntries(Object.entries(svgs).map(([path, svg]) => [path.replace(/^.*\/(.*)\.svg$/, "$1"), svg]));
 
 export type IcoName =
-  | "house-6" | "layers" | "gamepad" | "square-activity-chart" | "star-2" | "gear-3" | "magnifier" | "bell" | "refresh"
+  | "gamepad" | "square-activity-chart" | "star-2" | "gear-3" | "magnifier" | "bell" | "refresh"
   | "eye-2" | "chevron-down" | "repeat-2" | "user-3" | "arrow-door-out-2" | "stopwatch" | "energy" | "lock"
-  | "circle-plus" | "check" | "clock-2" | "flag-8" | "skull";
+  | "circle-plus" | "check" | "clock-2" | "flag-8";
 
 // nucleo core icons, recoloured to currentColor at copy time
 export function Ico({ name, className = "h-5 w-5" }: { name: IcoName; className?: string }) {

@@ -1,82 +1,77 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { DECK_CAP, LIVE_MATCHES, ME, OPEN_MATCHES, PLAYERS, avatarOf, byId, byName, type LiveMatch } from "../mock";
 import { ARENAS } from "../rules";
 import { GameCard } from "../ui/Card";
 import { Ico, type IcoName } from "../ui/kit";
-import { RailIcon } from "../ui/railIcons";
 import { artOf, infoOf, tierOf } from "../ui/meta";
 import { loadDecks } from "./Decks";
+import { short, useBalance } from "../hooks";
+import { useWallet } from "../useWallet";
 
 type Go = (tab: "play" | "trade" | "decks" | "ranks") => void;
 const TITLES = ["server room", "chalk hall", "library", "night track", "market", "court"];
 
-function Hero({ go }: { go: Go }) {
-  const champ = infoOf(byName("claude-fable-5"));
+function Account() {
+  const { address } = useWallet();
+  const balance = useBalance(address);
   const rate = Math.round((ME.wins / (ME.wins + ME.losses)) * 100);
+  const next = { rookie: 10, trainer: 25, ace: 50, champion: 50 }[ME.rank];
+  const nextName = { rookie: "trainer", trainer: "ace", ace: "champion", champion: "champion" }[ME.rank];
+  const stats: [string, string][] = [
+    [`${ME.wins}`, "wins"],
+    [`${rate}%`, "win rate"],
+    [ME.winnings.toFixed(2), "MON won"],
+    ["#9", "season rank"],
+    [`${ME.streak}`, "win streak"],
+  ];
   return (
-    <section className="relative overflow-hidden rounded-[36px] bg-[#050806]">
-      {/* huge type filled with the arena, the evolve look */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-4 text-center font-display leading-[.82] text-transparent select-none"
-        style={{ backgroundImage: "linear-gradient(rgba(10,40,16,.5),rgba(10,40,16,.8)), url(/art/arenas/reasoning@1x.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundClip: "text", WebkitBackgroundClip: "text", fontSize: "clamp(110px, 17vw, 270px)", imageRendering: "pixelated" }}
-      >
-        SEASON 1
-      </div>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(35%_55%_at_68%_60%,rgba(184,255,61,.2),transparent_70%)]" />
-
-      <span className="absolute top-[14%] right-[5%] hidden rotate-[-8deg] font-display text-[clamp(26px,3vw,46px)] leading-[.9] text-neon drop-shadow-[0_4px_0_rgba(0,0,0,.6)] md:block">
-        13 DAYS
-        <br />
-        LEFT
-      </span>
-      <span className="absolute right-[40%] bottom-[16%] hidden rotate-[-6deg] font-display text-[clamp(20px,2.4vw,36px)] leading-[.9] text-white/80 lg:block">
-        25 MON
-        <br />
-        POOL
-      </span>
-
-      <div className="relative grid min-h-[480px] items-end gap-6 p-7 md:grid-cols-[1fr_auto] md:p-10">
-        <div className="relative z-10 flex flex-col gap-6 self-end">
-          <div className="flex items-center gap-3">
-            <img src={avatarOf(ME)} alt="" className="pixel h-14 w-14 rounded-2xl bg-white/10 object-cover" />
-            <div>
-              <div className="text-sm text-white/60">welcome back</div>
-              <div className="flex items-center gap-2 text-xl font-bold text-white">
-                {ME.handle}
-                <span className="rounded-lg bg-neon/15 px-2 py-0.5 text-xs font-semibold text-neon capitalize">{ME.rank}</span>
-              </div>
-            </div>
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="flex items-center gap-4 rounded-[28px] bg-panel p-5">
+        <img src={avatarOf(ME, false)} alt="" className="pixel h-24 w-24 shrink-0 rounded-2xl bg-panel-2 object-contain" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-xl font-bold">{ME.handle}</span>
+            <span className="rounded-lg bg-neon/15 px-2 py-0.5 text-xs font-semibold text-neon capitalize">{ME.rank}</span>
           </div>
-          <h2 className="font-display text-[clamp(52px,6vw,92px)] leading-[.9] text-white uppercase">
-            Ready to
-            <br />
-            <span className="text-neon">battle?</span>
-          </h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <button onClick={() => go("play")} className="flex h-16 items-center gap-3 rounded-full bg-neon px-9 text-lg font-extrabold text-bg uppercase shadow-[0_12px_40px_-10px_rgba(184,255,61,.7)] transition hover:bg-neon-hi active:scale-[.98]">
-              <RailIcon name="play" className="h-7 w-7" cutColor="#b8ff3d" />
-              Quick match
-            </button>
-            <button onClick={() => go("decks")} className="h-16 rounded-full border-2 border-neon/70 px-8 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10">
-              Edit deck
-            </button>
-          </div>
-          <div className="flex gap-6 text-white">
-            {[
-              [`${ME.wins}`, "wins"],
-              [`${rate}%`, "win rate"],
-              [`${ME.winnings.toFixed(2)}`, "MON won"],
-              [`#9`, "season rank"],
-            ].map(([v, k]) => (
-              <div key={k}>
-                <div className="text-2xl font-extrabold">{v}</div>
-                <div className="text-xs text-white/50">{k}</div>
-              </div>
-            ))}
+          <div className="mt-0.5 text-sm text-mute capitalize">{ME.cls}</div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full bg-panel-2 px-3 py-1 font-mono text-xs text-mute">{address ? short(address) : "setting up"}</span>
+            <span className="rounded-full bg-panel-2 px-3 py-1 font-semibold">{balance.toFixed(3)} MON</span>
           </div>
         </div>
-        <img src={artOf(champ.card.name, 3)} alt="" className="pixel pointer-events-none relative z-0 hidden h-[430px] w-[430px] object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,.6)] md:block" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 rounded-[28px] bg-panel p-5 sm:grid-cols-5">
+        {stats.map(([v, k]) => (
+          <div key={k} className="flex flex-col justify-center rounded-2xl bg-panel-2 px-3 py-4 text-center">
+            <div className="text-2xl font-extrabold">{v}</div>
+            <div className="mt-1 text-xs text-mute">{k}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col justify-center gap-4 rounded-[28px] bg-[linear-gradient(150deg,#2a3a0e,#1e1f23_65%)] p-5">
+        <div>
+          <div className="flex justify-between text-sm">
+            <span className="text-mute">next rank · <span className="text-ink capitalize">{nextName}</span></span>
+            <span className="font-semibold">
+              {ME.wins}/{next}
+            </span>
+          </div>
+          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/30">
+            <div className="h-full rounded-full bg-neon" style={{ width: `${Math.min(100, (ME.wins / next) * 100)}%` }} />
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-sm">
+            <span className="text-mute">season 1 · 25 MON pool</span>
+            <span className="font-semibold">13 days left</span>
+          </div>
+          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/30">
+            <div className="h-full w-[57%] rounded-full bg-white/70" />
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -200,7 +195,9 @@ function LiveCard({ m, onWatch }: { m: LiveMatch; onWatch: () => void }) {
   );
 }
 
-export function Home({ go }: { go: Go }) {
+export function Home() {
+  const nav = useNavigate();
+  const go: Go = (t) => nav(`/${t}`);
   const deck = useMemo(() => loadDecks()[0]!, []);
   const deckCards = deck.cards.map((id) => infoOf(byId(id)));
   const power = deckCards.reduce((a, c) => a + c.power, 0);
@@ -208,7 +205,7 @@ export function Home({ go }: { go: Go }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <Hero go={go} />
+      <Account />
 
       <section className="rounded-[36px] bg-[#e4e9d6] p-5 md:p-7">
         <div className="mb-5 flex items-end justify-between px-1 text-[#0f1a08]">

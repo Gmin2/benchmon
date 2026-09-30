@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { devUrl } from "../dev";
 import { byName } from "../mock";
 import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
@@ -131,18 +130,6 @@ export function Welcome() {
           <span className="grid h-10 w-10 place-items-center rounded-full bg-neon text-lg font-extrabold text-bg">B</span>
           <span className="text-[21px] font-bold tracking-tight">Benchmon</span>
         </span>
-        <nav className="hidden gap-8 text-[15px] font-semibold text-white/70 md:flex">
-          {["About", "Cards", "Ranks", "Docs"].map((l) => (
-            <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white">
-              {l}
-            </a>
-          ))}
-          {import.meta.env.DEV && (
-            <a href={devUrl("a")} className="text-white/45 hover:text-white">
-              Dev mode
-            </a>
-          )}
-        </nav>
         <div className="flex gap-2">
           <button onClick={() => setOpen(true)} className="hidden h-12 rounded-full border-2 border-neon/70 px-6 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10 sm:block">
             Try for free
@@ -171,7 +158,7 @@ export function Welcome() {
             <RailIcon name="play" className="h-6 w-6" cutColor="#b8ff3d" />
             Play for free
           </button>
-          <a href="#cards" className="grid h-14 place-items-center rounded-full border-2 border-neon/70 bg-[#08080a]/85 px-8 text-[15px] font-extrabold tracking-wide text-neon uppercase backdrop-blur transition hover:bg-[#15180d]">
+          <a href="#" onClick={(e) => { e.preventDefault(); setOpen(true); }} className="grid h-14 place-items-center rounded-full border-2 border-neon/70 bg-[#08080a]/85 px-8 text-[15px] font-extrabold tracking-wide text-neon uppercase backdrop-blur transition hover:bg-[#15180d]">
             Explore
           </a>
         </div>

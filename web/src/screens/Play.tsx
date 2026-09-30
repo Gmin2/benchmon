@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import type { Card } from "../chain";
 import { DECK_CAP, ME, OPEN_MATCHES, PLAYERS, ROSTER, avatarOf, byId, mockDuel, type Deck, type Player, type Transcript } from "../mock";
 import { ARENAS, roundWinner } from "../rules";
@@ -392,7 +393,9 @@ function Match({ deck, stake, opp, onExit }: { deck: Deck; stake: number; opp: P
   );
 }
 
-export function Play({ preset }: { preset?: Deck | null }) {
+export function Play() {
+  // a deck sent from the Decks page starts a match right away
+  const preset = (useLocation().state as { deck?: Deck } | null)?.deck ?? null;
   const [game, setGame] = useState<{ deck: Deck; stake: number; opp: Player; key: number } | null>(null);
   useEffect(() => {
     if (preset) setGame({ deck: preset, stake: 0.05, opp: PLAYERS[1]!, key: Date.now() });
