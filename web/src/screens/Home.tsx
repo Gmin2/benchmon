@@ -10,7 +10,8 @@ import { short, useBalance } from "../hooks";
 import { useWallet } from "../useWallet";
 import { useMe } from "../profile";
 import { formatEther } from "viem";
-import { openSeats, useOwed, withdraw, type AnyWrite } from "../duel";
+import { isMine, openSeats, useOwed, withdraw, type AnyWrite } from "../duel";
+import { loadMarkets } from "../market";
 import { usePoll } from "../hooks";
 import { faceOf } from "./play/parts";
 
@@ -195,6 +196,44 @@ function Modes({ go }: { go: Go }) {
   );
 }
 
+// matches still before their first reveal, so spectators can back a side or trade them right now
+function BetsOpen() {
+  const nav = useNavigate();
+  const { address } = useWallet();
+  const { data: rows = [] } = usePoll(() => loadMarkets(12), 4000, []);
+  const open = rows.filter((r) => r.betting && !isMine(r.match, address));
+  if (!open.length) return null;
+  return (
+    <section className="rounded-[28px] border border-neon/30 bg-neon/5 p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="relative flex h-3 w-3">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon/60" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-neon" />
+        </span>
+        <h2 className="text-xl font-extrabold">Bets open now</h2>
+        <span className="text-sm text-mute">closes at the first card reveal, be quick</span>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {open.map((r) => (
+          <button key={r.id.toString()} onClick={() => nav(`/trade?m=${r.id}`)} className="flex items-center gap-4 rounded-2xl bg-panel px-4 py-3 text-left transition hover:bg-panel-2">
+            <div>
+              <div className="font-semibold">Match #{r.id.toString()}</div>
+              <div className="text-xs text-mute">
+                {r.match.state === 0 ? "waiting for a player" : "picking cards"} · pot {(Number(formatEther(r.match.stake)) * 2).toFixed(2)} MON
+              </div>
+            </div>
+            <div className="text-right text-sm">
+              <div className="font-bold text-neon">{r.open ? `A ${Math.round(r.priceA * 100)}¢` : "pool"}</div>
+              <div className="text-xs text-dim">{(r.poolA + r.poolB).toFixed(3)} MON backed</div>
+            </div>
+            <span className="rounded-full bg-neon px-3 py-1.5 text-xs font-bold text-bg">Bet</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function LiveCard({ m, onWatch }: { m: LiveMatch; onWatch: () => void }) {
   const a = infoOf(byName(m.cardA));
   const b = infoOf(byName(m.cardB));
@@ -255,6 +294,7 @@ export function Home() {
     <div className="flex flex-col gap-8">
       <Claim />
       <Account />
+      <BetsOpen />
 
       <section className="rounded-[36px] bg-[#e4e9d6] p-5 md:p-7">
         <div className="mb-5 flex items-end justify-between px-1 text-[#0f1a08]">

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { parseEther } from "viem";
-import { matchMarketAbi } from "../abi";
+import { backingAbi, matchMarketAbi } from "../abi";
 import { CONTRACTS, type Card } from "../chain";
 import { deckOf, short, useBalance, useCards, usePoll } from "../hooks";
-import { cents, loadHistory, loadMarkets, mon, priceAfter, pushSample, quote, redeemableOf, sharesOf, type MarketRow, type Sample } from "../market";
+import { backedOf, cents, loadHistory, loadMarkets, mon, poolPayout, priceAfter, pushSample, quote, redeemableOf, sharesOf, type MarketRow, type Sample } from "../market";
 import { useWallet } from "../useWallet";
 import { AreaChart } from "../ui/chart";
 import { Btn, Chip, Ico, IconBtn, Panel, SearchBar, Seg } from "../ui/kit";
@@ -32,10 +33,12 @@ function DeckStack({ deck, size = "h-10 w-10" }: { deck: Card[]; size?: string }
   );
 }
 
+const ZERO32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 function status(m: MarketRow): { label: string; tone: "up" | "down" | "flat" | "gold" | "violet" } {
-  if (!m.open) return { label: "No market", tone: "flat" };
   if (m.match.state === 2) return { label: "Settled", tone: "flat" };
-  if (m.trading) return { label: "Trading", tone: "up" };
+  if (m.betting) return { label: m.open ? "Bets open" : "Pool open", tone: "up" };
+  if (!m.open && m.match.state === 0) return { label: "No market", tone: "flat" };
   if (m.match.awaitingVerdict) return { label: "Live duel", tone: "violet" };
   return { label: "In play", tone: "gold" };
 }
@@ -58,9 +61,10 @@ export function Trade() {
   const cards = useCards();
   const { address, write, ready } = useWallet();
   const balance = useBalance(address);
-  const { data: markets = [], err } = usePoll(() => loadMarkets(12), 5000, []);
-  const [pick, setPick] = useState<bigint | null>(null);
-  const [mode, setMode] = useState<"buy" | "sell">("buy");
+  const { data: markets = [], err } = usePoll(() => loadMarkets(12), 4000, []);
+  const [params] = useSearchParams();
+  const [pick, setPick] = useState<bigint | null>(() => (/^\d+$/.test(params.get("m") ?? "") ? BigInt(params.get("m")!) : null));
+  const [mode, setMode] = useState<"buy" | "sell" | "pool">("buy");
   const [side, setSide] = useState<1 | 2>(1);
   const [amount, setAmount] = useState("1");
   const [range, setRange] = useState<Range>("all");
@@ -70,7 +74,8 @@ export function Trade() {
   const [view, setView] = useState<"both" | "chart">("both");
 
   const withMarket = markets.filter((m) => m.open);
-  const m = markets.find((x) => x.id === pick) ?? withMarket[0] ?? markets[0];
+  // a match you can still bet on first, then one with a market
+  const m = markets.find((x) => x.id === pick) ?? markets.find((x) => x.betting) ?? withMarket[0] ?? markets[0];
   useEffect(() => {
     if (m && pick === null) setPick(m.id);
   }, [m, pick]);
@@ -85,6 +90,7 @@ export function Trade() {
   }, [m?.id]);
 
   const { data: mine } = usePoll(async () => (m && address ? { ...(await sharesOf(m.id, address)), redeem: await redeemableOf(m.id, address) } : null), 5000, [m?.id, address]);
+  const { data: pool } = usePoll(async () => (m && address ? backedOf(m.id, address) : null), 5000, [m?.id, address]);
 
   const deckA = m ? deckOf(m.match.deckA, cards) : [];
   const deckB = m ? deckOf(m.match.deckB, cards) : [];
@@ -126,6 +132,29 @@ export function Trade() {
     }
     setBusy("");
   };
+  const backSide = async () => {
+    if (!m) return;
+    setNote("");
+    setBusy("backing");
+    try {
+      await write({ address: CONTRACTS.backing, abi: backingAbi, functionName: "back", args: [m.id, side], value: parseEther(n.toString()), gas: 100_000n });
+      setNote(`backed side ${side === 1 ? "A" : "B"} with ${n} MON`);
+    } catch (e) {
+      setNote((e as Error).message.split("\n")[0]!);
+    }
+    setBusy("");
+  };
+  const claimPool = async () => {
+    if (!m) return;
+    setBusy("claiming");
+    try {
+      await write({ address: CONTRACTS.backing, abi: backingAbi, functionName: "claim", args: [m.id], gas: 90_000n });
+      setNote("claimed");
+    } catch (e) {
+      setNote((e as Error).message.split("\n")[0]!);
+    }
+    setBusy("");
+  };
   const redeem = async () => {
     if (!m) return;
     setBusy("redeeming");
@@ -138,7 +167,8 @@ export function Trade() {
     setBusy("");
   };
 
-  const cantTrade = !m?.trading ? "trading is closed for this match" : !ready ? "account is getting ready" : n <= 0 ? "enter an amount" : mode === "buy" && cost > balance ? "not enough MON" : mode === "sell" && n > held ? "you do not hold that many" : "";
+  const cantPool = !m?.betting ? "bets are closed for this match" : !ready ? "account is getting ready" : n <= 0 ? "enter an amount" : n > balance ? "not enough MON" : "";
+  const cantTrade = !m?.open ? "no market on this match, use the pool" : !m?.trading ? "trading is closed for this match" : !ready ? "account is getting ready" : n <= 0 ? "enter an amount" : mode === "buy" && cost > balance ? "not enough MON" : mode === "sell" && n > held ? "you do not hold that many" : "";
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_480px]">
@@ -151,6 +181,25 @@ export function Trade() {
             <IconBtn name="square-activity-chart" label="chart only" active={view === "chart"} onClick={() => setView("chart")} />
           </div>
         </div>
+
+        {m?.betting && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[linear-gradient(110deg,#b8ff3d,#8fe04a)] px-5 py-4 text-bg">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-bg/60" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-bg" />
+              </span>
+              <span className="text-lg font-extrabold">Bets open on match #{m.id.toString()}</span>
+              <span className="text-sm text-bg/70">
+                {m.match.state === 0 ? "waiting for a second player" : m.match.commitA !== ZERO32 && m.match.commitB !== ZERO32 ? "both cards locked, closes any second" : "closes when the first card is revealed"}
+              </span>
+            </div>
+            <span className="text-sm font-semibold">
+              pool {mon(m.poolA + m.poolB, 3)}
+              {m.open ? ` · market ${cents(m.priceA)} A` : ""}
+            </span>
+          </div>
+        )}
 
         {m && view === "both" && (
           <div className="mt-8">
@@ -238,12 +287,11 @@ export function Trade() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex gap-5 text-3xl font-bold tracking-tight">
-            <button onClick={() => setMode("buy")} className={mode === "buy" ? "text-neon" : "text-dim hover:text-mute"}>
-              BACK
-            </button>
-            <button onClick={() => setMode("sell")} className={mode === "sell" ? "text-neon" : "text-dim hover:text-mute"}>
-              SELL
-            </button>
+            {(["buy", "sell", "pool"] as const).map((k) => (
+              <button key={k} onClick={() => setMode(k)} className={`uppercase ${mode === k ? "text-neon" : "text-dim hover:text-mute"}`}>
+                {k}
+              </button>
+            ))}
           </div>
           <div className="flex gap-3">
             <IconBtn name="refresh" label="refresh" onClick={() => setHistory(m ? loadHistory(m.id) : [])} />
@@ -251,11 +299,70 @@ export function Trade() {
           </div>
         </div>
 
+        {mode === "pool" && m && (
+          <>
+            <Panel className="p-5">
+              <p className="text-sm text-mute">Back a side. When the match ends the winning side splits the whole pool. A draw refunds everyone.</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {([1, 2] as const).map((k) => {
+                  const mineSide = k === 1 ? m.poolA : m.poolB;
+                  const total = m.poolA + m.poolB;
+                  const top = [...(k === 1 ? deckA : deckB)].sort((x, y) => infoOf(y).power - infoOf(x).power)[0];
+                  return (
+                    <button key={k} onClick={() => setSide(k)} className={`flex flex-col items-start gap-1 rounded-2xl border-2 p-4 text-left transition ${side === k ? "border-neon bg-neon/10" : "border-line bg-panel-2 hover:bg-raised"}`}>
+                      <span className="flex items-center gap-2">
+                        <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-neon/15">{top && <Sprite card={top} className="h-[150%] w-[150%] translate-y-[12%]" />}</span>
+                        <span className="text-lg font-semibold">Side {k === 1 ? "A" : "B"}</span>
+                      </span>
+                      <span className="text-sm text-mute">{mon(mineSide, 3)} backed</span>
+                      <span className="text-xs text-dim">{total > 0 ? `${Math.round((mineSide / total) * 100)}% of the pool` : "no one yet"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-5 flex items-end justify-between gap-4">
+                <label className="min-w-0 flex-1">
+                  <span className="text-sm text-dim">You put in</span>
+                  <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" aria-label="MON to back" className="mt-1 block w-full min-w-0 bg-transparent text-[40px] leading-none font-bold outline-none" />
+                </label>
+                <span className="shrink-0 text-right text-sm text-dim">
+                  If side {side === 1 ? "A" : "B"} wins
+                  <span className="mt-1 block text-lg font-medium text-neon">{mon(poolPayout(side === 1 ? m.poolA : m.poolB, side === 1 ? m.poolB : m.poolA, n), 4)}</span>
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {["0.005", "0.01", "0.02", "0.05"].map((v) => (
+                  <button key={v} onClick={() => setAmount(v)} className={`h-9 rounded-full px-3 text-sm font-semibold ${amount === v ? "bg-neon text-bg" : "bg-panel-2 text-mute hover:text-ink"}`}>
+                    {v}
+                  </button>
+                ))}
+                <span className="ml-auto self-center text-sm text-dim">balance {balance.toFixed(3)}</span>
+              </div>
+            </Panel>
+            <Btn size="lg" disabled={Boolean(cantPool) || Boolean(busy)} onClick={backSide} className="w-full">
+              {busy ? `${busy}…` : cantPool || `Back side ${side === 1 ? "A" : "B"} with ${n} MON`}
+            </Btn>
+            {pool && pool.claim > 0 && (
+              <Btn kind="ghost" size="lg" className="w-full" onClick={claimPool} disabled={Boolean(busy)}>
+                Claim {mon(pool.claim)} from the pool
+                <Ico name="check" className="h-5 w-5" />
+              </Btn>
+            )}
+            <Panel className="p-5">
+              <div className="text-sm text-dim">Your backing</div>
+              <div className="mt-2 text-[26px] font-bold">
+                {mon(pool?.a ?? 0, 3)} A · {mon(pool?.b ?? 0, 3)} B
+              </div>
+            </Panel>
+          </>
+        )}
+        {mode !== "pool" && (
+          <>
         <div className="relative flex flex-col gap-2">
           <Panel className="p-5">
             <div className="flex items-start justify-between">
               <SidePill side={side} deck={side === 1 ? deckA : deckB} onClick={() => setSide(side === 1 ? 2 : 1)} />
-              <span className="text-mute">{mode === "buy" ? "You back" : "You sell"}</span>
+              <span className="text-mute">{mode === "buy" ? "You buy" : "You sell"}</span>
             </div>
             <div className="mt-6 flex items-end justify-between gap-4">
               <input
@@ -299,7 +406,7 @@ export function Trade() {
         </div>
 
         <Btn size="lg" disabled={Boolean(cantTrade) || Boolean(busy)} onClick={submit} className="w-full">
-          {busy ? `${busy}…` : cantTrade || (mode === "buy" ? `Back side ${side === 1 ? "A" : "B"}` : `Sell side ${side === 1 ? "A" : "B"}`)}
+          {busy ? `${busy}…` : cantTrade || (mode === "buy" ? `Buy side ${side === 1 ? "A" : "B"}` : `Sell side ${side === 1 ? "A" : "B"}`)}
         </Btn>
         {mine && mine.redeem > 0 ? (
           <Btn kind="ghost" size="lg" className="w-full" onClick={redeem} disabled={Boolean(busy)}>
@@ -311,6 +418,8 @@ export function Trade() {
             Switch to side {side === 1 ? "B" : "A"}
             <Ico name="repeat-2" className="h-5 w-5" />
           </Btn>
+        )}
+          </>
         )}
         {note && <p className="px-2 text-sm text-mute">{note}</p>}
 

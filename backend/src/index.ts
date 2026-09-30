@@ -3,6 +3,7 @@ import { judge, pub } from "./chain";
 import { duelAbi } from "./abi";
 import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
+import { houseLoop } from "./house";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 
 const cors = {
@@ -92,3 +93,5 @@ catchUp().catch((e) => console.error(`catch up failed: ${(e as Error).message.sp
 
 await loadPicks();
 relayLoop();
+// HOUSE=0 runs the backend without seeding markets
+if (process.env.HOUSE !== "0") houseLoop();

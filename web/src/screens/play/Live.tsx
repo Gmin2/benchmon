@@ -190,6 +190,28 @@ export function Live({ id }: { id: bigint }) {
       />
     );
 
+  // a seat taken back before anyone joined
+  if (m.state === 2 && m.b === ZERO)
+    return (
+      <Panel className="flex flex-wrap items-center justify-between gap-4 p-8">
+        <div>
+          <div className="text-2xl font-extrabold">Match #{id.toString()} was cancelled</div>
+          <div className="mt-1 text-mute">nobody joined, so the host gets the {formatEther(m.stake)} MON stake back. bets on it are refunded.</div>
+          {err && <div className="mt-2 text-sm text-down">{err}</div>}
+        </div>
+        <div className="flex gap-3">
+          {isA && owed > 0n && (
+            <Btn disabled={Boolean(busy)} onClick={() => act("claiming", () => withdraw(w))}>
+              {busy || `Claim ${Number(formatEther(owed)).toFixed(3)} MON`}
+            </Btn>
+          )}
+          <Btn kind="ghost" onClick={() => nav("/play")}>
+            Lobby
+          </Btn>
+        </div>
+      </Panel>
+    );
+
   if (!isA && !isB)
     return (
       <Panel className="p-8">

@@ -163,7 +163,13 @@ export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; 
             <span className="text-sm text-white/60">Round {Math.min(m.round + 1, 3)} of 3</span>
             <span className="h-4 w-px bg-white/20" />
             <span className="text-sm">
-              arena <b className="font-semibold text-neon uppercase">{arena}</b> · {TITLES[arena]}
+              {m.state === 0 ? (
+                "arena is drawn when a player joins"
+              ) : (
+                <>
+                  arena <b className="font-semibold text-neon uppercase">{arena}</b> · {TITLES[arena]}
+                </>
+              )}
             </span>
             {m.round === 2 && m.state === 1 && <Chip tone="violet">live duel round</Chip>}
           </div>

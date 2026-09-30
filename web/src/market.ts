@@ -1,5 +1,5 @@
 import { formatEther, type Address } from "viem";
-import { duelAbi, matchMarketAbi } from "./abi";
+import { backingAbi, duelAbi, matchMarketAbi } from "./abi";
 import { CONTRACTS, pub, recentMatches, type Match } from "./chain";
 
 export type MarketRow = {
@@ -11,7 +11,10 @@ export type MarketRow = {
   pool: number; // collateral in MON
   priceA: number; // 0..1, what one share of a costs right now
   open: boolean; // a market exists
-  trading: boolean; // still before the first reveal
+  trading: boolean; // a market exists and it is still before the first reveal
+  betting: boolean; // backing and trading stay open until the first card of the match is revealed
+  poolA: number; // backing pool per side, in MON
+  poolB: number;
 };
 
 const wad = (x: bigint) => Number(formatEther(x));
@@ -20,10 +23,12 @@ export async function loadMarkets(limit = 12): Promise<MarketRow[]> {
   const list = await recentMatches(limit);
   const reads = await Promise.all(
     list.map(async ({ id, m }) => {
-      const [mk, p, betting] = await Promise.all([
+      const [mk, p, betting, poolA, poolB] = await Promise.all([
         pub.readContract({ address: CONTRACTS.market, abi: matchMarketAbi, functionName: "markets", args: [id] }),
         pub.readContract({ address: CONTRACTS.market, abi: matchMarketAbi, functionName: "priceA", args: [id] }),
         pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "bettingOpen", args: [id] }).catch(() => false),
+        pub.readContract({ address: CONTRACTS.backing, abi: backingAbi, functionName: "totals", args: [id, 1n] }),
+        pub.readContract({ address: CONTRACTS.backing, abi: backingAbi, functionName: "totals", args: [id, 2n] }),
       ]);
       const [b, qA, qB, collateral] = mk as readonly [bigint, bigint, bigint, bigint, bigint, boolean];
       return {
@@ -36,6 +41,9 @@ export async function loadMarkets(limit = 12): Promise<MarketRow[]> {
         priceA: wad(p as bigint),
         open: b > 0n,
         trading: b > 0n && Boolean(betting),
+        betting: Boolean(betting),
+        poolA: wad(poolA as bigint),
+        poolB: wad(poolB as bigint),
       } satisfies MarketRow;
     }),
   );
@@ -71,6 +79,21 @@ export async function sharesOf(id: bigint, who: Address) {
 
 export async function redeemableOf(id: bigint, who: Address) {
   return wad((await pub.readContract({ address: CONTRACTS.market, abi: matchMarketAbi, functionName: "redeemable", args: [id, who] })) as bigint);
+}
+
+// what one address backed on each side and what it can claim once the match is over
+export async function backedOf(id: bigint, who: Address) {
+  const [a, b, claim] = await Promise.all([
+    pub.readContract({ address: CONTRACTS.backing, abi: backingAbi, functionName: "backed", args: [id, who, 1n] }),
+    pub.readContract({ address: CONTRACTS.backing, abi: backingAbi, functionName: "backed", args: [id, who, 2n] }),
+    pub.readContract({ address: CONTRACTS.backing, abi: backingAbi, functionName: "claimable", args: [id, who] }),
+  ]);
+  return { a: wad(a as bigint), b: wad(b as bigint), claim: wad(claim as bigint) };
+}
+
+// a pool payout: the whole pool split pro rata among the winning side
+export function poolPayout(stakeSide: number, otherSide: number, amount: number) {
+  return amount <= 0 ? 0 : (amount * (stakeSide + otherSide + amount)) / (stakeSide + amount);
 }
 
 // price history kept in this browser: the opening price, then every change seen while a page is open
