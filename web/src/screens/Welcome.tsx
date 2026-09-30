@@ -68,7 +68,7 @@ function Flames() {
 function Table() {
   const ring = (inset: string, style: React.CSSProperties, cls = "") => <div className={`absolute rounded-full ${cls}`} style={{ inset, ...style }} />;
   return (
-    <div className="absolute bottom-[-14%] left-1/2 aspect-square w-[58%] -translate-x-1/2 origin-bottom scale-y-[.4]">
+    <div className="absolute bottom-[-22%] left-1/2 aspect-square w-[50%] -translate-x-1/2 origin-bottom scale-y-[.4]">
       {ring("0", { background: "#161233", boxShadow: "0 -30px 120px rgba(0,0,0,.6) inset" })}
       {ring("5%", { background: "#221a4d" })}
       {ring("11%", { background: "repeating-conic-gradient(from 0deg, #f59a86 0 4deg, #1a1440 4deg 9deg, #6a58ff 9deg 13deg, #1a1440 13deg 18deg)" }, "animate-[spin-slow_40s_linear_infinite]")}
@@ -117,7 +117,7 @@ export function Welcome() {
   ];
 
   return (
-    <div className="relative min-h-svh overflow-hidden bg-[#08080a] text-white">
+    <div className="relative h-svh overflow-hidden bg-[#08080a] text-white">
       {/* nav */}
       <header className="relative z-30 mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5">
         <span className="flex items-center gap-2 text-[19px] font-semibold tracking-tight">
@@ -170,10 +170,10 @@ export function Welcome() {
       </section>
 
       {/* the scene */}
-      <section className="relative -mt-24 h-[72vh] min-h-[540px]">
+      <section className="pointer-events-none absolute inset-x-0 bottom-0 h-[56svh]">
         <Flames />
         <Table />
-        <img src={artOf(fable.card.name, 3)} alt="claude fable 5, legendary" className="pixel absolute bottom-[4%] left-1/2 h-[64%] -translate-x-1/2 object-contain drop-shadow-[0_24px_30px_rgba(0,0,0,.55)]" />
+        <img src={artOf(fable.card.name, 3)} alt="claude fable 5, legendary" className="pixel absolute bottom-[2%] left-1/2 h-[58%] -translate-x-1/2 object-contain drop-shadow-[0_24px_30px_rgba(0,0,0,.55)]" />
         {floaters.map((f, i) => (
           <div key={i} className="absolute animate-[float_6s_ease-in-out_infinite]" style={{ left: f.x, top: f.y, rotate: `${f.r}deg`, animationDelay: `-${f.d}s` }}>
             {f.el}
