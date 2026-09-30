@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DECK_CAP, LIVE_MATCHES, ME, OPEN_MATCHES, PLAYERS, avatarOf, byId, byName, type LiveMatch } from "../mock";
+import { DECK_CAP, LIVE_MATCHES, OPEN_MATCHES, PLAYERS, avatarOf, byId, byName, type LiveMatch } from "../mock";
 import { ARENAS } from "../rules";
 import { GameCard } from "../ui/Card";
 import { Ico, type IcoName } from "../ui/kit";
@@ -8,11 +8,43 @@ import { artOf, infoOf, tierOf } from "../ui/meta";
 import { loadDecks } from "./Decks";
 import { short, useBalance } from "../hooks";
 import { useWallet } from "../useWallet";
+import { clearClaimable, useMe } from "../profile";
 
 type Go = (tab: "play" | "trade" | "decks" | "ranks") => void;
 const TITLES = ["server room", "chalk hall", "library", "night track", "market", "court"];
 
+// winnings wait in the contract until claimed, so they get a banner until they are
+function Claim() {
+  const { owed } = useMe();
+  const [done, setDone] = useState(false);
+  if (owed <= 0 && !done) return null;
+  return (
+    <section className={`flex flex-wrap items-center justify-between gap-4 rounded-[28px] p-5 ${done ? "bg-panel" : "bg-[linear-gradient(110deg,#b8ff3d,#8fe04a)] text-bg"}`}>
+      <div className="flex items-center gap-4">
+        <span className={`grid h-12 w-12 place-items-center rounded-2xl text-2xl font-extrabold ${done ? "bg-neon/15 text-neon" : "bg-bg/10"}`}>✓</span>
+        <div>
+          <div className="text-lg font-extrabold">{done ? "Claimed, it is in your balance" : `You won ${owed.toFixed(3)} MON`}</div>
+          <div className={`text-sm ${done ? "text-mute" : "text-bg/70"}`}>{done ? "gas was on us" : "your winnings are ready, one tap and it lands in your balance"}</div>
+        </div>
+      </div>
+      {!done && (
+        <button
+          onClick={() => {
+            clearClaimable();
+            setDone(true);
+            setTimeout(() => setDone(false), 4000);
+          }}
+          className="h-12 rounded-full bg-bg px-7 font-bold text-neon transition hover:bg-panel"
+        >
+          Claim {owed.toFixed(3)} MON
+        </button>
+      )}
+    </section>
+  );
+}
+
 function Account() {
+  const { me: ME } = useMe();
   const { address } = useWallet();
   const balance = useBalance(address);
   const rate = Math.round((ME.wins / (ME.wins + ME.losses)) * 100);
@@ -80,6 +112,7 @@ function Account() {
 type Mode = { title: string; body: string; cta: string; icon: IcoName; onClick: () => void; art: React.ReactNode };
 
 function Modes({ go }: { go: Go }) {
+  const nav = useNavigate();
   const opus = infoOf(byName("claude-opus-5.5"));
   const kimi = infoOf(byName("kimi-k3"));
   const grok = byName("grok-4.20");
@@ -87,10 +120,10 @@ function Modes({ go }: { go: Go }) {
   const modes: Mode[] = [
     {
       title: "Quick match",
-      body: "We find you an opponent with a similar deck. Stake 0.05 MON, winner takes the pot.",
+      body: "One tap, your last deck and stake. We find an opponent with a similar deck, winner takes the pot.",
       cta: "Play now",
       icon: "gamepad",
-      onClick: () => go("play"),
+      onClick: () => nav("/play", { state: { quick: true } }),
       art: (
         <div className="relative h-[140px] w-[170px]">
           {[kimi, opus].map((c, i) => (
@@ -205,6 +238,7 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-8">
+      <Claim />
       <Account />
 
       <section className="rounded-[36px] bg-[#e4e9d6] p-5 md:p-7">

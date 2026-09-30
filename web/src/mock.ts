@@ -85,11 +85,15 @@ export function mockDuel(arena: number, a: Card, b: Card, winner: 0 | 1 | 2): Tr
   const good = ["def second(xs): return sorted(set(xs))[-2]", "391", "5", "Canberra", "Bonjour", "I do not know, that is in the future."];
   const bad = ["return max(xs)", "401", "10", "Sydney", "Bonjour!", "Brazil won it."];
   const g = good[arena]!, w = bad[arena]!;
-  const aWins = winner === 1, bWins = winner === 2;
+  // speed and cost duels are won on time or price, so both answers are right there
+  const race = ARENAS[arena] === "speed" || ARENAS[arena] === "cost";
+  const aOk = race || winner !== 2, bOk = race || winner !== 1;
+  const [aMs, bMs] = ARENAS[arena] === "speed" && winner === 2 ? [2100, 1200] : [1200, 2100];
+  const [aUsd, bUsd] = ARENAS[arena] === "cost" && winner === 2 ? [0.0009, 0.0003] : [0.0003, 0.0009];
   return {
     prompt: prompts[arena]!,
-    a: { model: infoOf(a).display, text: aWins || winner === 0 ? g : w, ms: 900 + arena * 310, costUsd: 0.0004 + arena * 0.0001, correct: aWins || winner === 0 },
-    b: { model: infoOf(b).display, text: bWins || winner === 0 ? g : w, ms: 1400 + arena * 190, costUsd: 0.0002 + arena * 0.00007, correct: bWins || winner === 0 },
+    a: { model: infoOf(a).display, text: aOk ? g : w, ms: aMs, costUsd: aUsd, correct: aOk },
+    b: { model: infoOf(b).display, text: bOk ? g : w, ms: bMs, costUsd: bUsd, correct: bOk },
     reason: winner === 0 ? "both correct, a draw" : ARENAS[arena] === "speed" ? "both correct, faster wins" : ARENAS[arena] === "cost" ? "both correct, cheaper wins" : "only one answer was correct",
     outcome: winner,
   };

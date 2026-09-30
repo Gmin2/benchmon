@@ -7,6 +7,8 @@ import { short, useBalance } from "../hooks";
 import { Logo } from "../ui/brand";
 import { Ico } from "../ui/kit";
 import { RailIcon, type RailIconName } from "../ui/railIcons";
+import { useMe } from "../profile";
+import { Onboarding } from "./Onboarding";
 
 const NAV: { to: string; label: string; icon: RailIconName }[] = [
   { to: "/home", label: "Home", icon: "home" },
@@ -108,8 +110,10 @@ function TopBar() {
 }
 
 export function Shell() {
+  const { profile } = useMe();
   return (
     <div className="min-h-svh bg-app">
+      {!profile && <Onboarding />}
       <Rail />
       <div className="md:pl-[92px]">
         <div className="mx-auto max-w-[1480px] px-5 pb-24 md:px-10">

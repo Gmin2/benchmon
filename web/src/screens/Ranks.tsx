@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CARD_RECORDS, ME, PLAYERS, avatarOf, byName, type Player } from "../mock";
+import { useMe } from "../profile";
+import { CARD_RECORDS, PLAYERS, avatarOf, byName, type Player } from "../mock";
 import { MARKS } from "../ui/generated";
 import { Btn, Chip, Ico, Panel, Seg } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
@@ -129,6 +130,7 @@ function CardsTable() {
 }
 
 export function Ranks() {
+  const { me: ME } = useMe();
   const nav = useNavigate();
   const onPlay = () => nav("/play");
   const [view, setView] = useState<(typeof VIEWS)[number]>("Players");
