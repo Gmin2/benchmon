@@ -27,7 +27,18 @@ contract DuelTest is Test {
         vm.deal(bob, 10 ether);
     }
 
+    // the loser of the last round names the next arena, tests take the first one offered
+    function _pick(uint256 id) internal {
+        IDuel.Match memory m = duel.getMatch(id);
+        if (m.picker == address(0)) return;
+        uint8 a;
+        while (m.offer & (1 << a) == 0) a++;
+        vm.prank(m.picker);
+        duel.pickArena(id, a);
+    }
+
     function _commit(address p, uint256 id, uint16 card, bytes32 salt) internal {
+        _pick(id);
         uint8 round = duel.getMatch(id).round;
         vm.prank(p);
         duel.commit(id, keccak256(abi.encode(id, round, p, card, salt)));
@@ -337,6 +348,110 @@ contract DuelTest is Test {
         vm.expectRevert(IDuel.NotPlayer.selector);
         duel.revealFor(id, relayer, 0, "sa");
     }
+
+    // plays one round without the helper's auto pick, so the pick itself can be tested
+    function _rawRound(uint256 id, uint16 ca, uint16 cb) internal {
+        uint8 round = duel.getMatch(id).round;
+        vm.prank(alice);
+        duel.commit(id, keccak256(abi.encode(id, round, alice, ca, bytes32("a"))));
+        vm.prank(bob);
+        duel.commit(id, keccak256(abi.encode(id, round, bob, cb, bytes32("b"))));
+        vm.prank(alice);
+        duel.reveal(id, ca, "a");
+        vm.prank(bob);
+        duel.reveal(id, cb, "b");
+    }
+
+    function _firstOffered(uint8 offer) internal pure returns (uint8 a) {
+        while (offer & (1 << a) == 0) a++;
+    }
+
+    function _countBits(uint8 x) internal pure returns (uint8 n) {
+        for (; x != 0; x >>= 1) n += x & 1;
+    }
+
+    function test_loserPicksNextArena() public {
+        uint256 id = _start();
+        _rawRound(id, 0, 1);
+        IDuel.Match memory m = duel.getMatch(id);
+        assertEq(m.picker, bob);
+        assertEq(_countBits(m.offer), 3);
+        uint8 choice = _firstOffered(m.offer);
+        vm.prank(alice);
+        vm.expectRevert(IDuel.NotPlayer.selector);
+        duel.pickArena(id, choice);
+        vm.prank(bob);
+        duel.pickArena(id, choice);
+        m = duel.getMatch(id);
+        assertEq(m.arena, choice);
+        assertEq(m.picker, address(0));
+        assertEq(m.offer, 0);
+    }
+
+    function test_pickMustBeOffered() public {
+        uint256 id = _start();
+        _rawRound(id, 0, 1);
+        uint8 offer = duel.getMatch(id).offer;
+        uint8 outside;
+        while (offer & (1 << outside) != 0) outside++;
+        vm.prank(bob);
+        vm.expectRevert(IDuel.BadArena.selector);
+        duel.pickArena(id, outside);
+        vm.prank(bob);
+        vm.expectRevert(IDuel.BadArena.selector);
+        duel.pickArena(id, 6);
+    }
+
+    function test_noCommitBeforeThePick() public {
+        uint256 id = _start();
+        _rawRound(id, 0, 1);
+        vm.prank(alice);
+        vm.expectRevert(IDuel.WrongState.selector);
+        duel.commit(id, bytes32(uint256(1)));
+    }
+
+    function test_stalledPickFallsBackToTheOffer() public {
+        uint256 id = _start();
+        _rawRound(id, 0, 1);
+        uint8 offer = duel.getMatch(id).offer;
+        vm.expectRevert(IDuel.TooEarly.selector);
+        duel.skipPick(id);
+        // a stalled pick is not a stalled move, nobody can take the match for it
+        vm.warp(block.timestamp + duel.MOVE_TIMEOUT() + 1);
+        vm.expectRevert(IDuel.WrongState.selector);
+        duel.claimTimeout(id);
+        duel.skipPick(id);
+        IDuel.Match memory m = duel.getMatch(id);
+        assertTrue(offer & (1 << m.arena) != 0);
+        assertEq(m.picker, address(0));
+        // play goes on
+        _play(id, 2, 4);
+        assertEq(uint8(duel.getMatch(id).state), uint8(IDuel.State.Done));
+    }
+
+    function test_drawnRoundHasNoPick() public {
+        uint256 id = _start();
+        _rawRound(id, 2, 3);
+        IDuel.Match memory m = duel.getMatch(id);
+        assertEq(m.picker, address(0));
+        assertEq(m.round, 1);
+        // the next round can start straight away
+        _rawRound(id, 0, 1);
+        assertEq(duel.getMatch(id).picker, bob);
+    }
+
+    function test_noPickAfterTheLastRound() public {
+        uint256 id = _start();
+        _play(id, 0, 1);
+        _play(id, 2, 4);
+        IDuel.Match memory m = duel.getMatch(id);
+        assertEq(uint8(m.state), uint8(IDuel.State.Done));
+        assertEq(m.picker, address(0));
+        vm.prank(alice);
+        vm.expectRevert(IDuel.WrongState.selector);
+        duel.pickArena(id, 0);
+    }
+
 }
 
 contract Rejecter {

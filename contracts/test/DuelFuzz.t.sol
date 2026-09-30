@@ -48,6 +48,16 @@ contract DuelFuzzTest is Test {
     address bob = makeAddr("bob");
     uint256 constant CARDS = 8;
 
+    // the loser of the last round names the next arena, tests take the first one offered
+    function _pick(uint256 id) internal {
+        IDuel.Match memory m = duel.getMatch(id);
+        if (m.picker == address(0)) return;
+        uint8 a;
+        while (m.offer & (1 << a) == 0) a++;
+        vm.prank(m.picker);
+        duel.pickArena(id, a);
+    }
+
     function setUp() public {
         cards = new CardStats();
         duel = new Duel(cards, address(0));
@@ -86,6 +96,7 @@ contract DuelFuzzTest is Test {
     }
 
     function _move(uint256 id, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb) internal {
+        _pick(id);
         uint8 round = duel.getMatch(id).round;
         vm.prank(alice);
         duel.commit(id, keccak256(abi.encode(id, round, alice, ca, sa)));
@@ -107,6 +118,7 @@ contract DuelFuzzTest is Test {
         uint8 winsA;
         uint8 winsB;
         for (uint16 r; r < 3 && duel.getMatch(id).state == IDuel.State.Playing; r++) {
+            _pick(id);
             uint8 arena = duel.getMatch(id).arena;
             uint16 ca = r;
             uint16 cb = r + 3;
@@ -186,6 +198,16 @@ contract Handler is Test {
     }
 
     // five distinct cards out of 0..7 from a seed
+    // the loser of the last round names the next arena, tests take the first one offered
+    function _pick(uint256 id) internal {
+        IDuel.Match memory m = duel.getMatch(id);
+        if (m.picker == address(0)) return;
+        uint8 a;
+        while (m.offer & (1 << a) == 0) a++;
+        vm.prank(m.picker);
+        duel.pickArena(id, a);
+    }
+
     function _deck(uint256 seed) internal pure returns (uint16[5] memory d) {
         uint16 start = uint16(seed % 8);
         for (uint16 i; i < 5; i++) {
@@ -217,6 +239,7 @@ contract Handler is Test {
         uint256 id = ids[pick % ids.length];
         card = uint16(bound(card, 0, 9));
         address p = _actor(who);
+        _pick(id);
         uint8 round = duel.getMatch(id).round;
         vm.prank(p);
         try duel.commit(id, keccak256(abi.encode(id, round, p, card, salt))) {} catch {}
@@ -248,6 +271,7 @@ contract Handler is Test {
     function playRound(uint256 pick, uint16 ca, uint16 cb, bytes32 sa, bytes32 sb, bool skipB) external {
         if (ids.length == 0) return;
         uint256 id = ids[pick % ids.length];
+        _pick(id);
         IDuel.Match memory m = duel.getMatch(id);
         if (m.state != IDuel.State.Playing) return;
         ca = uint16(bound(ca, 0, 9));
@@ -284,6 +308,7 @@ contract Handler is Test {
         if (ids.length == 0) return;
         uint256 id = ids[pick % ids.length];
         for (uint16 r; r < 3; r++) {
+            _pick(id);
             IDuel.Match memory m = duel.getMatch(id);
             if (m.state != IDuel.State.Playing || m.awaitingVerdict || m.commitA != 0 || m.commitB != 0) return;
             uint16 ca = _pickFrom(m.deckA & ~m.usedA, seed + r);

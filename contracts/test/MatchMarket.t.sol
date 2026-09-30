@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {IMatchMarket} from "../src/interfaces/IMatchMarket.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+import {IDuel} from "../src/interfaces/IDuel.sol";
 import {Test} from "forge-std/Test.sol";
 import {CardStats} from "../src/CardStats.sol";
 import {Duel} from "../src/Duel.sol";
@@ -41,7 +42,18 @@ contract MatchMarketTest is Test {
         market.open{value: market.maxLoss(B)}(id, B);
     }
 
+    // the loser of the last round names the next arena, tests take the first one offered
+    function _pick(uint256 id) internal {
+        IDuel.Match memory m = duel.getMatch(id);
+        if (m.picker == address(0)) return;
+        uint8 a;
+        while (m.offer & (1 << a) == 0) a++;
+        vm.prank(m.picker);
+        duel.pickArena(id, a);
+    }
+
     function _round(uint256 id, uint16 ca, uint16 cb) internal {
+        _pick(id);
         uint8 round = duel.getMatch(id).round;
         vm.prank(alice);
         duel.commit(id, keccak256(abi.encode(id, round, alice, ca, bytes32("a"))));
@@ -93,6 +105,7 @@ contract MatchMarketTest is Test {
         vm.prank(bob);
         duel.join{value: 1 ether}(id, deck);
         market.open{value: market.maxLoss(B)}(id, B);
+        _pick(id);
         uint8 round = duel.getMatch(id).round;
         vm.prank(alice);
         duel.commit(id, keccak256(abi.encode(id, round, alice, uint16(0), bytes32("a"))));

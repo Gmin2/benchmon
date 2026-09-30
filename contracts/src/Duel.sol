@@ -8,6 +8,8 @@ import {ICardStats} from "./interfaces/ICardStats.sol";
 // two players stake the same amount, play 3 rounds of hidden card picks.
 // each round has an arena (one of the six stats); the higher stat wins the round.
 // best of 3 takes the pot, a drawn match refunds both.
+// round 1's arena comes from the seed. after a decisive round the loser picks the next arena
+// from three offered, a comeback lever; after a drawn round it is random again.
 // the third round is the live duel: both chosen models answer the same prompt off chain and the
 // judge posts the verdict with a hash of prompt, answers and verdict. if the judge goes quiet,
 // anyone can settle that round by stats after VERDICT_TIMEOUT, so money is never stuck.
@@ -17,6 +19,8 @@ contract Duel is IDuel, Ownable {
     uint8 public constant LIVE_ROUND = 2;
     uint256 public constant MOVE_TIMEOUT = 120;
     uint256 public constant VERDICT_TIMEOUT = 10 minutes;
+    uint256 public constant PICK_TIMEOUT = 60;
+    uint8 public constant OFFER_SIZE = 3;
     uint8 public constant DECK_SIZE = 5;
 
     ICardStats public immutable cards;
@@ -100,10 +104,58 @@ contract Duel is IDuel, Ownable {
         emit Cancelled(id);
     }
 
+    // the loser of the last round names the next arena from the offer
+    function pickArena(uint256 id, uint8 arena) external {
+        Match storage m = matches[id];
+        if (m.state != State.Playing || m.picker == address(0)) revert WrongState();
+        if (msg.sender != m.picker) revert NotPlayer();
+        if (arena > 5 || m.offer & (1 << arena) == 0) revert BadArena();
+        _setArena(id, m, arena, false);
+    }
+
+    // a picker that sits on the choice past the deadline gets a random arena from the offer
+    function skipPick(uint256 id) external {
+        Match storage m = matches[id];
+        if (m.state != State.Playing || m.picker == address(0)) revert WrongState();
+        if (block.timestamp <= m.deadline) revert TooEarly();
+        _setArena(id, m, _fromOffer(m.offer, uint256(m.seed)), true);
+    }
+
+    function _setArena(uint256 id, Match storage m, uint8 arena, bool byTimeout) internal {
+        m.arena = arena;
+        m.picker = address(0);
+        m.offer = 0;
+        m.deadline = uint64(block.timestamp + MOVE_TIMEOUT);
+        emit ArenaPicked(id, m.round, arena, byTimeout);
+    }
+
+    // three different arenas drawn from the seed, as a bitmask
+    function _offer(uint256 seed) internal pure returns (uint8 bits) {
+        uint8 n;
+        for (uint256 i; n < OFFER_SIZE; i++) {
+            uint8 a = uint8(uint256(keccak256(abi.encode(seed, i))) % 6);
+            if (bits & (1 << a) == 0) {
+                bits |= uint8(1 << a);
+                n++;
+            }
+        }
+    }
+
+    function _fromOffer(uint8 offer, uint256 seed) internal pure returns (uint8) {
+        uint256 k = seed % OFFER_SIZE;
+        for (uint8 a; a < 6; a++) {
+            if (offer & (1 << a) != 0) {
+                if (k == 0) return a;
+                k--;
+            }
+        }
+        return 0;
+    }
+
     // commit = keccak256(abi.encode(id, round, player, card, salt))
     function commit(uint256 id, bytes32 c) external {
         Match storage m = matches[id];
-        if (m.state != State.Playing || m.awaitingVerdict) revert WrongState();
+        if (m.state != State.Playing || m.awaitingVerdict || m.picker != address(0)) revert WrongState();
         if (msg.sender == m.a) {
             if (m.commitA != 0) revert AlreadyCommitted();
             m.commitA = c;
@@ -158,7 +210,8 @@ contract Duel is IDuel, Ownable {
     // if the other side stalls past the deadline, the player who moved takes the match
     function claimTimeout(uint256 id) external {
         Match storage m = matches[id];
-        if (m.state != State.Playing || m.awaitingVerdict) revert WrongState();
+        // a pending arena pick has its own timeout, see skipPick
+        if (m.state != State.Playing || m.awaitingVerdict || m.picker != address(0)) revert WrongState();
         if (block.timestamp <= m.deadline) revert TooEarly();
         bool aMoved = m.commitB == 0 ? m.commitA != 0 : m.revealedA;
         bool bMoved = m.commitA == 0 ? m.commitB != 0 : m.revealedB;
@@ -266,6 +319,14 @@ contract Duel is IDuel, Ownable {
             if (m.winsA > m.winsB) winner = m.a;
             else if (m.winsB > m.winsA) winner = m.b;
             _finish(id, m, winner);
+            return;
+        }
+        // a decisive round hands the next arena to the loser
+        if (roundWinner != address(0)) {
+            m.picker = roundWinner == m.a ? m.b : m.a;
+            m.offer = _offer(uint256(m.seed));
+            m.deadline = uint64(block.timestamp + PICK_TIMEOUT);
+            emit ArenaOffered(id, m.round, m.picker, m.offer);
         }
     }
 

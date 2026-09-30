@@ -36,6 +36,9 @@ interface IDuel {
         uint256 deckB;
         // 0 not finished, 1 a won, 2 b won, 3 draw or cancelled
         uint8 result;
+        // after a decisive round the loser picks the next arena from `offer` (a bitmask of arenas)
+        address picker;
+        uint8 offer;
     }
 
     event Created(uint256 indexed id, address indexed a, uint256 stake);
@@ -45,6 +48,8 @@ interface IDuel {
     event RoundWon(uint256 indexed id, uint8 round, address winner, uint8 nextArena);
     event Finished(uint256 indexed id, address winner, uint256 payout);
     event Cancelled(uint256 indexed id);
+    event ArenaOffered(uint256 indexed id, uint8 round, address indexed picker, uint8 offer);
+    event ArenaPicked(uint256 indexed id, uint8 round, uint8 arena, bool byTimeout);
     event LiveDuel(uint256 indexed id, uint16 cardA, uint16 cardB, uint8 arena);
     event Verdict(uint256 indexed id, uint8 outcome, bytes32 duelHash, bool byJudge);
     event JudgeSet(address judge);
@@ -65,6 +70,7 @@ interface IDuel {
     error BadDeck();
     error NotInDeck();
     error NothingOwed();
+    error BadArena();
 
     function cards() external view returns (ICardStats);
     function judge() external view returns (address);
@@ -78,6 +84,8 @@ interface IDuel {
     function commit(uint256 id, bytes32 c) external;
     function reveal(uint256 id, uint16 card, bytes32 salt) external;
     function revealFor(uint256 id, address player, uint16 card, bytes32 salt) external;
+    function pickArena(uint256 id, uint8 arena) external;
+    function skipPick(uint256 id) external;
     function claimTimeout(uint256 id) external;
     function settleLive(uint256 id, uint8 outcome, bytes32 duelHash) external;
     function settleLiveByStats(uint256 id) external;
