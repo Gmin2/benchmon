@@ -1,7 +1,7 @@
 import { config } from "./config";
 import { judge, pub } from "./chain";
 import { duelAbi } from "./abi";
-import { watchLiveDuels } from "./watcher";
+import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 
@@ -55,11 +55,40 @@ const server = Bun.serve({
 
 console.log(`backend on :${server.port}, judge ${judge.address}`);
 
-watchLiveDuels(async (d) => {
+// a model or the judge can fail for a moment, so try a few times before leaving it to settleLiveByStats
+const judging = new Set<string>();
+async function handle(d: LiveDuel) {
+  const key = d.id.toString();
+  if (judging.has(key)) return;
+  judging.add(key);
   console.log(`live duel ${d.id}: card ${d.cardA} vs ${d.cardB}, arena ${d.arena}, block ${d.block}`);
-  const r = await judgeLiveDuel(d);
-  console.log(`match ${d.id} settled`, r);
-});
+  try {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const r = await judgeLiveDuel(d);
+        console.log(`match ${d.id} settled`, r);
+        return;
+      } catch (e) {
+        console.error(`duel ${d.id} attempt ${attempt} failed: ${(e as Error).message.split("\n")[0]}`);
+        await Bun.sleep(attempt * 5000);
+      }
+    }
+  } finally {
+    judging.delete(key);
+  }
+}
+
+// duels that went live while the backend was down are still waiting for a verdict
+async function catchUp(scan = 50n) {
+  const count = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "matchCount" });
+  for (let id = count - 1n; id >= 0n && id >= count - scan; id--) {
+    const m = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
+    if (m.awaitingVerdict) handle({ id, cardA: m.cardA, cardB: m.cardB, arena: m.arena, block: 0n });
+  }
+}
+
+watchLiveDuels(handle);
+catchUp().catch((e) => console.error(`catch up failed: ${(e as Error).message.split("\n")[0]}`));
 
 await loadPicks();
 relayLoop();

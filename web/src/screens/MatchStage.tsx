@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatEther } from "viem";
 import { BACKEND, type Card, type Match } from "../chain";
+import { loadRounds, trackRounds, type RoundLog } from "../duel";
 import { deckOf, short } from "../hooks";
 import { ARENAS } from "../rules";
 import { CardBack, GameCard } from "../ui/Card";
@@ -18,29 +19,11 @@ type Transcript = {
   reason: string;
 };
 
-type RoundLog = { round: number; arena: number; cardA: number; cardB: number };
-
-// rounds seen while watching, kept per match in this browser
-const rkey = (id: bigint) => `benchmon:rounds:${id}`;
-function loadRounds(id: bigint): RoundLog[] {
-  try {
-    return JSON.parse(localStorage.getItem(rkey(id)) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-function saveRound(id: bigint, r: RoundLog) {
-  const list = loadRounds(id).filter((x) => x.round !== r.round);
-  list.push(r);
-  list.sort((a, b) => a.round - b.round);
-  localStorage.setItem(rkey(id), JSON.stringify(list));
-  return list;
-}
-
 function phase(m: Match) {
   if (m.state === 0) return { label: "Waiting for an opponent", tone: "flat" as const };
   if (m.state === 2) return { label: m.result === 3 ? "Draw" : "Finished", tone: "flat" as const };
   if (m.awaitingVerdict) return { label: "Live duel, models answering", tone: "violet" as const };
+  if (m.picker !== "0x0000000000000000000000000000000000000000") return { label: `Side ${m.picker.toLowerCase() === m.a.toLowerCase() ? "A" : "B"} picks the next arena`, tone: "down" as const };
   const a = m.commitA !== ZERO, b = m.commitB !== ZERO;
   if (m.revealedA && m.revealedB) return { label: "Cards revealed", tone: "gold" as const };
   if (a && b) return { label: "Both locked, revealing", tone: "gold" as const };
@@ -136,12 +119,18 @@ export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; 
   const p = phase(m);
   const clock = useCountdown(m.state === 1 ? m.deadline : 0n);
   const [rounds, setRounds] = useState<RoundLog[]>(() => loadRounds(id));
+  const prev = useRef<Match>(undefined);
   const [duel, setDuel] = useState<Transcript | null>(null);
 
-  useEffect(() => setRounds(loadRounds(id)), [id]);
   useEffect(() => {
-    if (m.revealedA && m.revealedB) setRounds(saveRound(id, { round: m.round, arena: m.arena, cardA: m.cardA, cardB: m.cardB }));
-  }, [id, m.round, m.revealedA, m.revealedB, m.cardA, m.cardB, m.arena]);
+    prev.current = undefined;
+    setRounds(loadRounds(id));
+  }, [id]);
+  // rounds are read off the counter moving, see trackRounds
+  useEffect(() => {
+    setRounds(trackRounds(id, prev.current, m));
+    prev.current = m;
+  }, [id, m]);
 
   // the transcript shows up once the backend has run the live duel
   useEffect(() => {

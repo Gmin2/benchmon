@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { DEV, SEAT } from "./dev";
 import { ME, type ClassId, type Player } from "./mock";
 
-// the player's own look and unclaimed winnings, kept in this browser until they live onchain
+// the player's own look, kept in this browser until it lives onchain
 type Profile = { cls: ClassId; body: "male" | "female"; handle: string };
-const PKEY = "benchmon:profile";
-const CKEY = "benchmon:claimable";
+// the two dev players share one browser, so each seat keeps its own look
+const PKEY = DEV ? `benchmon:profile:dev-${SEAT}` : "benchmon:profile";
 const EVENT = "benchmon:profile";
 
 export function loadProfile(): Profile | null {
@@ -20,26 +21,12 @@ export function saveProfile(p: Profile) {
   dispatchEvent(new Event(EVENT));
 }
 
-export function claimable(): number {
-  return Number(localStorage.getItem(CKEY) ?? 0);
-}
-
-export function addClaimable(amount: number) {
-  localStorage.setItem(CKEY, String(claimable() + amount));
-  dispatchEvent(new Event(EVENT));
-}
-
-export function clearClaimable() {
-  localStorage.removeItem(CKEY);
-  dispatchEvent(new Event(EVENT));
-}
-
-function current(): { me: Player; profile: Profile | null; owed: number } {
+function current(): { me: Player; profile: Profile | null } {
   const profile = loadProfile();
-  return { me: profile ? { ...ME, ...profile } : ME, profile, owed: claimable() };
+  return { me: profile ? { ...ME, ...profile } : ME, profile };
 }
 
-// re-renders whenever the profile or winnings change, in this tab or another
+// re-renders whenever the profile changes, in this tab or another
 export function useMe() {
   const [state, setState] = useState(current);
   useEffect(() => {

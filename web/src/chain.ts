@@ -12,13 +12,13 @@ export const pub = createPublicClient({ transport: http(RPC, { batch: { wait: 30
 // current testnet set, see contracts/README.md
 export const CONTRACTS = {
   cards: "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb" as Address,
-  duel: "0x1B9E807c7e738779998e943879132CA03B603ccb" as Address,
-  backing: "0x6807C5681B77A28CF1E177f6C4518A9730771238" as Address,
-  market: "0xC3cd445e804FEC26d873D736eA284F33dB275dC8" as Address,
+  duel: "0xC110B9Ee0845Ed76D722Ccec3111302D56d1cA61" as Address,
+  backing: "0x966B8773B281589bFE3E83C7153a64B7E192a9F5" as Address,
+  market: "0x52CE235DCF1Afa5d4AF427BE9Df039c7797Fa35B" as Address,
 };
 
 // monad charges the gas limit, not gas used, so limits sit just above what the tests measured
-export const GAS = { create: 350_000n, join: 450_000n, commit: 100_000n, reveal: 350_000n, withdraw: 80_000n, cancel: 90_000n, timeout: 250_000n };
+export const GAS = { create: 350_000n, join: 450_000n, commit: 100_000n, reveal: 350_000n, withdraw: 80_000n, cancel: 90_000n, timeout: 250_000n, pick: 80_000n };
 
 export type Card = { id: number; name: string; stats: Stats };
 

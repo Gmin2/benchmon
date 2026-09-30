@@ -68,3 +68,16 @@ players play from alchemy smart accounts owned by their dynamic wallets. match 2
 15 real models (roster in `backend/src/roster.json`). `backend/scripts/stats.ts` builds `backend/data/stats.json` from the arena leaderboard dataset (text_style_control coding, math, hard_prompts and text_factuality, published 2026-09-25), openrouter prices, and speed measured by benchmon (5 runs per model, `data/speed.json`). claude-opus-5.5 math and honesty are estimated from claude-opus-4.6 until arena scores it; llama was replaced by tencent hy3 because arena has no llama factuality score.
 
 the owner named the 15 cards with neutral stats (all 50) and set the deck cap to 1600, then `cre workflow simulate stats-feed --broadcast` fetched `/stats` from the backend, reached identical consensus on the payload, and wrote all 15 cards through chainlink's forwarder in tx `0x11f292858f336f0cd51fb390f86c2b00e246331c368c2461315fc21cfe90da82`. `backend/scripts/check-onchain-stats.ts`: 15/15 cards match stats.json.
+
+### current set (sept 30 2026, the loser of a round picks the next arena)
+
+`script/DeployGame.s.sol` redeploys the game on the existing CardStats, so the chainlink written stats stay. deck cap 1600, deployer is judge.
+
+| contract | address |
+|---|---|
+| CardStats | `0xD27730D0482746B1e0BD702429C2A9AB98d141Fb` (unchanged) |
+| Duel | `0xC110B9Ee0845Ed76D722Ccec3111302D56d1cA61` |
+| Backing | `0x966B8773B281589bFE3E83C7153a64B7E192a9F5` |
+| MatchMarket | `0x52CE235DCF1Afa5d4AF427BE9Df039c7797Fa35B` |
+
+after a decisive round the loser gets three arenas (`ArenaOffered`) and picks one with `pickArena` within 60s; after that anyone can call `skipPick` and one of the three is drawn. a drawn round still gets a random arena. the duel set of sept 28 is retired.

@@ -31,6 +31,7 @@ export default function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/decks" element={<Decks />} />
         <Route path="/play" element={<Play />} />
+        <Route path="/play/:id" element={<Play />} />
         <Route path="/trade" element={<Trade />} />
         <Route path="/ranks" element={<Ranks />} />
         {/* the plain onchain game, kept while the screens above run on mock data */}

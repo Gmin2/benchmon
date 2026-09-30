@@ -1,5 +1,6 @@
 // mock data for the screens that are designed ahead of their live wiring
 import type { Card } from "./chain";
+import type { Transcript } from "./duel";
 import { ROSTER } from "./mockRoster";
 import { ARENAS } from "./rules";
 import { infoOf } from "./ui/meta";
@@ -47,14 +48,6 @@ export const CARD_RECORDS: CardRecord[] = ROSTER.map((c, i) => {
   return { name: c.name, plays: 180 + ((i * 37) % 120), winRate: Math.min(0.78, 0.3 + (p - 130) / 600 + ((i % 3) - 1) * 0.03), duelWins: 4 + ((i * 7) % 22), trend: ((i * 13) % 9) - 4 };
 }).sort((a, b) => b.winRate - a.winRate);
 
-export type OpenMatch = { id: number; host: Player; stake: number; power: number; ago: string };
-export const OPEN_MATCHES: OpenMatch[] = [
-  { id: 41, host: PLAYERS[3]!, stake: 0.05, power: 1580, ago: "just now" },
-  { id: 40, host: PLAYERS[5]!, stake: 0.01, power: 1412, ago: "1 min" },
-  { id: 38, host: PLAYERS[9]!, stake: 0.02, power: 1206, ago: "3 min" },
-  { id: 37, host: PLAYERS[1]!, stake: 0.1, power: 1596, ago: "6 min" },
-];
-
 export type Deck = { id: string; name: string; cards: number[] };
 export const STARTER_DECKS: Deck[] = [
   { id: "balanced", name: "Balanced", cards: [0, 8, 12, 13, 14] },
@@ -63,14 +56,6 @@ export const STARTER_DECKS: Deck[] = [
 ];
 
 export const DECK_CAP = 1600;
-
-export type Transcript = {
-  prompt: string;
-  a: { model: string; text: string; ms: number; costUsd: number; correct: boolean };
-  b: { model: string; text: string; ms: number; costUsd: number; correct: boolean };
-  reason: string;
-  outcome: 0 | 1 | 2;
-};
 
 // a canned live duel per arena, the real one comes from the backend judge
 export function mockDuel(arena: number, a: Card, b: Card, winner: 0 | 1 | 2): Transcript {
