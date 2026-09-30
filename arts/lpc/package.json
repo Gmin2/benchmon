@@ -1,0 +1,22 @@
+{
+  "name": "benchmon-lpc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compose": "bun src/compose.ts",
+    "sheet": "bun src/sheet.ts",
+    "build": "bun src/compose.ts && bun src/sheet.ts",
+    "marks": "bun src/marks.ts",
+    "lineage": "bun src/lineage.ts",
+    "gallery": "bun src/gallery-data.ts",
+    "all": "bun src/compose.ts && bun src/sheet.ts && bun src/marks.ts && bun src/lineage.ts && bun src/classes.ts && bun src/gallery-data.ts",
+    "classes": "bun src/classes.ts"
+  },
+  "dependencies": {
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
+  }
+}
