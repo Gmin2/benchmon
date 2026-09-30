@@ -5,7 +5,7 @@ import { join } from "node:path"
 import { logos, minis } from "../logos"
 
 const here = new URL(".", import.meta.url).pathname
-const stats = JSON.parse(readFileSync(join(here, "../../benchmon/backend/data/stats.json"), "utf8"))
+const stats = JSON.parse(readFileSync(join(here, "../../backend/data/stats.json"), "utf8"))
 const lineage = JSON.parse(readFileSync(join(here, "../lpc/lineage.json"), "utf8"))
 
 type Raw = Record<string, number>

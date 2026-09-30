@@ -8,7 +8,7 @@ const apiKey = import.meta.env.VITE_ALCHEMY_API_KEY;
 const policyId = import.meta.env.VITE_ALCHEMY_POLICY_ID;
 
 export async function smartWalletFor(signer: WalletClient) {
-  if (!apiKey || !policyId) throw new Error("set VITE_ALCHEMY_API_KEY and VITE_ALCHEMY_POLICY_ID in benchmon/.env");
+  if (!apiKey || !policyId) throw new Error("set VITE_ALCHEMY_API_KEY and VITE_ALCHEMY_POLICY_ID in .env at the repo root");
   const base = createSmartWalletClient({
     signer: signer as never,
     transport: alchemyWalletTransport({ apiKey }),
