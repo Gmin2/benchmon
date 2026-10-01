@@ -4,7 +4,7 @@ import { formatEther } from "viem";
 import { matchesOf, rankOf } from "../duel";
 import { usePoll } from "../hooks";
 import { profileByName, profileUrl, siteHost, useMe, useProfiles, type Profile } from "../profile";
-import { Logo } from "../ui/brand";
+import { Wordmark } from "../ui/brand";
 import { CLASSES } from "../ui/generated";
 import { Btn, Chip, Panel } from "../ui/kit";
 import { faceOf } from "./play/parts";
@@ -154,7 +154,7 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
       <div className="mx-auto max-w-[1100px] px-5 pb-16">
         <header className="flex h-24 items-center justify-between">
           <Link to="/" aria-label="benchmon">
-            <Logo />
+            <Wordmark className="h-12" />
           </Link>
           <Link to="/">
             <Btn>Play for free</Btn>

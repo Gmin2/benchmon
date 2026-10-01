@@ -4,6 +4,7 @@ import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
 import { Pixel, ICONS } from "../ui/pixel";
 import { Login } from "./landing/Login";
+import { Wordmark } from "../ui/brand";
 import { RailIcon } from "../ui/railIcons";
 
 // film grain over everything, the reference's printed look
@@ -126,10 +127,7 @@ export function Welcome() {
     <div className="relative h-svh overflow-hidden bg-[#08080a] text-white">
       {/* nav */}
       <header className="relative z-30 mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5">
-        <span className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-neon text-lg font-extrabold text-bg">B</span>
-          <span className="text-[21px] font-bold tracking-tight">Benchmon</span>
-        </span>
+        <Wordmark className="h-14 md:h-[68px]" />
         <div className="flex gap-2">
           <button onClick={() => setOpen(true)} className="hidden h-12 rounded-full border-2 border-neon/70 px-6 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10 sm:block">
             Try for free
