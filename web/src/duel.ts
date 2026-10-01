@@ -233,7 +233,19 @@ export async function matchesOf(who: string, scan = 80) {
   const draws = done.filter((x) => x.m.result === 3).length;
   // net: stakes won minus stakes lost
   const net = done.reduce((a, x) => (x.m.result === side(x.m) ? a + x.m.stake : x.m.result === 3 ? a : a - x.m.stake), 0n);
-  return { matches: mine, wins, losses: done.length - wins - draws, draws, net, side };
+  // wins in a row counting back from the newest finished match, a draw ends it
+  let streak = 0;
+  for (const x of done) {
+    if (x.m.result !== side(x.m)) break;
+    streak++;
+  }
+  return { matches: mine, wins, losses: done.length - wins - draws, draws, net, streak, side };
 }
 
-export const rankOf = (wins: number) => (wins >= 50 ? "champion" : wins >= 25 ? "ace" : wins >= 10 ? "trainer" : "rookie");
+export const RANKS = [
+  { name: "rookie", at: 0 },
+  { name: "trainer", at: 10 },
+  { name: "ace", at: 25 },
+  { name: "champion", at: 50 },
+] as const;
+export const rankOf = (wins: number) => [...RANKS].reverse().find((r) => wins >= r.at)!.name;

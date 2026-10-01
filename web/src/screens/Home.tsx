@@ -8,9 +8,9 @@ import { artOf, infoOf, tierOf } from "../ui/meta";
 import { loadDecks } from "./Decks";
 import { short, useBalance } from "../hooks";
 import { useWallet } from "../useWallet";
-import { useMe } from "../profile";
+import { profileUrl, useMe } from "../profile";
 import { formatEther } from "viem";
-import { isMine, openSeats, useOwed, withdraw, type AnyWrite } from "../duel";
+import { RANKS, isMine, matchesOf, openSeats, rankOf, useOwed, withdraw, type AnyWrite } from "../duel";
 import { loadMarkets } from "../market";
 import { usePoll } from "../hooks";
 import { faceOf } from "./play/parts";
@@ -59,65 +59,92 @@ function Claim() {
 }
 
 function Account() {
-  const { me: ME } = useMe();
+  const { me, profile } = useMe();
   const { address } = useWallet();
   const balance = useBalance(address);
-  const rate = Math.round((ME.wins / (ME.wins + ME.losses)) * 100);
-  const next = { rookie: 10, trainer: 25, ace: 50, champion: 50 }[ME.rank];
-  const nextName = { rookie: "trainer", trainer: "ace", ace: "champion", champion: "champion" }[ME.rank];
+  const { data: rec } = usePoll(async () => (address ? matchesOf(address) : null), 15000, [address]);
+  const [copied, setCopied] = useState(false);
+
+  const wins = rec?.wins ?? 0;
+  const played = rec ? rec.wins + rec.losses + rec.draws : 0;
+  const rank = rankOf(wins);
+  const ri = RANKS.findIndex((r) => r.name === rank);
+  const next = RANKS[ri + 1];
+  const from = RANKS[ri]!.at;
+  const pct = next ? ((wins - from) / (next.at - from)) * 100 : 100;
+  const net = rec ? Number(formatEther(rec.net)) : 0;
+  const dash = !rec || played === 0;
   const stats: [string, string][] = [
-    [`${ME.wins}`, "wins"],
-    [`${rate}%`, "win rate"],
-    [ME.winnings.toFixed(2), "MON won"],
-    ["#9", "season rank"],
-    [`${ME.streak}`, "win streak"],
+    [rec ? String(played) : "—", "matches"],
+    [rec ? String(wins) : "—", "wins"],
+    [dash ? "—" : `${Math.round((wins / played) * 100)}%`, "win rate"],
+    [dash ? "—" : `${net >= 0 ? "+" : ""}${net.toFixed(2)}`, "net MON"],
+    [dash ? "—" : String(rec!.streak), "win streak"],
   ];
+  const copy = () => {
+    if (!profile) return;
+    navigator.clipboard.writeText(profileUrl(profile.username)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
-      <div className="flex items-center gap-4 rounded-[28px] bg-panel p-5">
-        <img src={avatarOf(ME, false)} alt="" className="pixel h-24 w-24 shrink-0 rounded-2xl bg-panel-2 object-contain" />
+    <section className="grid overflow-hidden rounded-[28px] bg-panel lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
+      {/* you */}
+      <div className="flex items-center gap-5 p-5">
+        <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[22px] bg-panel-2">
+          <img src="/art/arenas/reasoning@1x.png" alt="" className="pixel absolute inset-0 h-full w-full object-cover opacity-50" />
+          <img src={avatarOf({ ...me, rank }, false)} alt="" className="pixel relative h-full w-full object-contain" />
+        </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate text-xl font-bold">{ME.handle}</span>
-            <span className="rounded-lg bg-neon/15 px-2 py-0.5 text-xs font-semibold text-neon capitalize">{ME.rank}</span>
+            <span className="truncate text-2xl font-extrabold tracking-tight">{profile ? profile.username : me.handle}</span>
+            <span className="rounded-lg bg-neon/15 px-2 py-0.5 text-xs font-bold text-neon capitalize">{rank}</span>
           </div>
-          <div className="mt-0.5 text-sm text-mute capitalize">{ME.cls}</div>
+          <div className="mt-0.5 text-sm text-mute">
+            <span className="capitalize">{me.cls}</span> · <span className="font-semibold text-ink">{balance.toFixed(3)} MON</span>
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <span className="rounded-full bg-panel-2 px-3 py-1 font-mono text-xs text-mute">{address ? short(address) : "setting up"}</span>
-            <span className="rounded-full bg-panel-2 px-3 py-1 font-semibold">{balance.toFixed(3)} MON</span>
+            {profile ? (
+              <button onClick={copy} title="copy your page link" className="rounded-full bg-panel-2 px-3 py-1.5 font-mono text-xs text-mute transition hover:text-ink">
+                {copied ? "link copied" : `@${profile.username} · copy link`}
+              </button>
+            ) : (
+              <span className="rounded-full bg-panel-2 px-3 py-1.5 font-mono text-xs text-mute">{address ? short(address) : "setting up"}</span>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 rounded-[28px] bg-panel p-5 sm:grid-cols-5">
-        {stats.map(([v, k]) => (
-          <div key={k} className="flex flex-col justify-center rounded-2xl bg-panel-2 px-3 py-4 text-center">
-            <div className="text-2xl font-extrabold">{v}</div>
-            <div className="mt-1 text-xs text-mute">{k}</div>
-          </div>
-        ))}
+      {/* record, read from the chain */}
+      <div className="flex flex-col justify-center border-line px-5 py-4 lg:border-x">
+        <div className="grid grid-cols-5 divide-x divide-line">
+          {stats.map(([v, k]) => (
+            <div key={k} className="px-2 text-center">
+              <div className={`text-[26px] font-extrabold tracking-tight ${k === "net MON" && !dash ? (net >= 0 ? "text-neon" : "text-down") : ""}`}>{v}</div>
+              <div className="mt-0.5 text-xs text-mute">{k}</div>
+            </div>
+          ))}
+        </div>
+        {rec && played === 0 && <p className="mt-3 text-center text-sm text-dim">your record starts with your first match</p>}
       </div>
 
-      <div className="flex flex-col justify-center gap-4 rounded-[28px] bg-[linear-gradient(150deg,#2a3a0e,#1e1f23_65%)] p-5">
-        <div>
-          <div className="flex justify-between text-sm">
-            <span className="text-mute">next rank · <span className="text-ink capitalize">{nextName}</span></span>
-            <span className="font-semibold">
-              {ME.wins}/{next}
-            </span>
-          </div>
-          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/30">
-            <div className="h-full rounded-full bg-neon" style={{ width: `${Math.min(100, (ME.wins / next) * 100)}%` }} />
-          </div>
+      {/* rank ladder */}
+      <div className="flex flex-col justify-center gap-3 bg-[linear-gradient(150deg,#26350d,#1e1f23_70%)] p-5">
+        <div className="flex items-end justify-between">
+          {RANKS.map((r, i) => (
+            <div key={r.name} className={`flex flex-col items-center ${i > ri ? "opacity-35 grayscale" : ""}`}>
+              <img src={avatarOf({ ...me, rank: r.name }, true)} alt="" className={`pixel object-contain ${i === ri ? "h-12 w-12" : "h-9 w-9"}`} />
+              <span className={`mt-1 text-[11px] capitalize ${i === ri ? "font-bold text-neon" : "text-mute"}`}>{r.name}</span>
+            </div>
+          ))}
         </div>
         <div>
-          <div className="flex justify-between text-sm">
-            <span className="text-mute">season 1 · 25 MON pool</span>
-            <span className="font-semibold">13 days left</span>
+          <div className="h-2.5 overflow-hidden rounded-full bg-black/30">
+            <div className="h-full rounded-full bg-neon transition-[width] duration-700" style={{ width: `${Math.max(3, pct)}%` }} />
           </div>
-          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-black/30">
-            <div className="h-full w-[57%] rounded-full bg-white/70" />
-          </div>
+          <div className="mt-1.5 text-xs text-mute">{next ? `${next.at - wins} ${next.at - wins === 1 ? "win" : "wins"} to ${next.name}` : "top rank, keep the streak going"}</div>
         </div>
       </div>
     </section>
