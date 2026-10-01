@@ -21,7 +21,7 @@ type Transcript = {
 
 function phase(m: Match) {
   if (m.state === 0) return { label: "Waiting for an opponent", tone: "flat" as const };
-  if (m.state === 2) return { label: m.result === 3 ? "Draw" : "Finished", tone: "flat" as const };
+  if (m.state === 2) return { label: m.b === "0x0000000000000000000000000000000000000000" ? "Cancelled" : m.result === 3 ? "Draw" : "Finished", tone: "flat" as const };
   if (m.awaitingVerdict) return { label: "Live duel, models answering", tone: "violet" as const };
   if (m.picker !== "0x0000000000000000000000000000000000000000") return { label: `Side ${m.picker.toLowerCase() === m.a.toLowerCase() ? "A" : "B"} picks the next arena`, tone: "down" as const };
   const a = m.commitA !== ZERO, b = m.commitB !== ZERO;
@@ -74,7 +74,7 @@ function DeckRow({ deck, used, current, side }: { deck: Card[]; used: bigint; cu
   );
 }
 
-function Slot({ card, locked, revealed, commit, side, arena, facing, result }: { card?: Card; locked: boolean; revealed: boolean; commit: string; side: "a" | "b"; arena: Arena; facing?: Card; result?: "winner" | "loser" | null }) {
+function Slot({ card, locked, revealed, commit, side, arena, facing, result, idle = "picking a card" }: { card?: Card; locked: boolean; revealed: boolean; commit: string; side: "a" | "b"; arena: Arena; facing?: Card; result?: "winner" | "loser" | null; idle?: string }) {
   if (card && (revealed || result !== undefined)) return <GameCard info={infoOf(card)} size="tile" arena={arena} facing={facing ? infoOf(facing).type : null} state={result ?? null} />;
   if (locked) {
     return (
@@ -90,7 +90,7 @@ function Slot({ card, locked, revealed, commit, side, arena, facing, result }: {
     <div className="grid aspect-[5/7.4] w-[198px] place-items-center rounded-2xl border-2 border-dashed border-white/20 bg-black/30 text-center text-sm text-white/60">
       <span>
         <Ico name="clock-2" className="mx-auto mb-2 h-6 w-6" />
-        picking a card
+        {idle}
       </span>
     </div>
   );
@@ -149,7 +149,7 @@ export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; 
     };
   }, [id, m.awaitingVerdict, m.state, m.round]);
 
-  const winnerText = m.result === 1 ? "Side A wins the match" : m.result === 2 ? "Side B wins the match" : m.result === 3 ? "Draw, stakes returned" : "";
+  const winnerText = m.result === 1 ? "Side A wins the match" : m.result === 2 ? "Side B wins the match" : m.result === 3 ? (m.b === "0x0000000000000000000000000000000000000000" ? "Cancelled, nobody joined" : "Draw, stakes returned") : "";
 
   return (
     <div className="overflow-hidden rounded-[var(--radius-panel)] bg-panel">
@@ -203,7 +203,7 @@ export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; 
               </div>
               <Pips wins={m.winsA} tone="a" />
             </div>
-            <Slot card={cardA ?? undefined} locked={lockedA} revealed={m.revealedA} commit={m.commitA} side="a" arena={arena} facing={cardB} result={resA} />
+            <Slot card={cardA ?? undefined} locked={lockedA} revealed={m.revealedA} commit={m.commitA} side="a" arena={arena} facing={cardB} result={resA} idle={m.state === 0 ? "waiting for a player" : m.state === 2 ? "no card played" : undefined} />
             <DeckRow deck={deckA} used={m.usedA} current={m.revealedA ? m.cardA : undefined} side="a" />
           </div>
 
@@ -225,7 +225,7 @@ export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; 
                 <div className="font-semibold">{m.b.startsWith("0x0000") ? "open seat" : short(m.b)}</div>
               </div>
             </div>
-            <Slot card={cardB ?? undefined} locked={lockedB} revealed={m.revealedB} commit={m.commitB} side="b" arena={arena} facing={cardA} result={resB} />
+            <Slot card={cardB ?? undefined} locked={lockedB} revealed={m.revealedB} commit={m.commitB} side="b" arena={arena} facing={cardA} result={resB} idle={m.state === 0 ? "open seat" : m.state === 2 ? "no card played" : undefined} />
             <DeckRow deck={deckB} used={m.usedB} current={m.revealedB ? m.cardB : undefined} side="b" />
           </div>
         </div>

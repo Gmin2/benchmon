@@ -65,6 +65,19 @@ export function quote(m: MarketRow, side: 1 | 2, amount: number, sell = false) {
   return Math.abs(after - before);
 }
 
+// how many shares `mon` buys right now: the inverse of quote, by bisection since lmsr cost is monotonic
+export function sharesFor(m: MarketRow, side: 1 | 2, mon: number) {
+  if (!m.open || mon <= 0) return 0;
+  let lo = 0;
+  let hi = mon * 1000;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (quote(m, side, mid) > mon) hi = mid;
+    else lo = mid;
+  }
+  return lo;
+}
+
 export function priceAfter(m: MarketRow, side: 1 | 2, amount: number, sell = false) {
   const d = sell ? -amount : amount;
   const qA = side === 1 ? m.qA + d : m.qA;
