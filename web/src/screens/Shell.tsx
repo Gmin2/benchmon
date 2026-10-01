@@ -29,7 +29,6 @@ function Rail() {
           <NavLink key={n.to} to={n.to} title={n.label} aria-label={n.label} className="group relative flex w-[92px] flex-col items-center gap-1 py-1">
             {({ isActive: on }) => (
               <>
-                {on && <span className="absolute top-2 right-0 h-10 w-1.5 rounded-l-full bg-neon" />}
                 <span className={`grid h-[52px] w-[52px] place-items-center rounded-[18px] transition duration-200 ${on ? "bg-neon text-bg shadow-[0_8px_24px_-8px_rgba(184,255,61,.7)]" : "bg-transparent text-[#6b6d75] group-hover:-translate-y-0.5 group-hover:bg-panel group-hover:text-ink"}`}>
                   <RailIcon name={n.icon} className="h-[26px] w-[26px]" cutColor={on ? "#b8ff3d" : "#16171a"} />
                 </span>
