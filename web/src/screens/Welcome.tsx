@@ -190,7 +190,7 @@ export function Welcome() {
               ✕
             </button>
             <h2 className="text-2xl font-semibold tracking-tight">Start playing</h2>
-            <p className="mt-1 mb-5 text-sm text-white/55">Enter your email, we send a 6 digit code. No password, no wallet setup, every move is free.</p>
+            <p className="mt-1 mb-5 text-sm text-white/55">Sign in with Google or your email. No password, no wallet setup, every move is free.</p>
             <Login />
           </div>
         </div>

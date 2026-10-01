@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { clearSocialRedirectParams, completeSocialRedirect, detectSocialRedirectUrl } from "@dynamic-labs-sdk/client";
 import { useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { DEV } from "./dev";
 import { Logo } from "./ui/brand";
@@ -15,6 +17,17 @@ export default function App() {
   const { data: init } = useInitStatus();
   const { data: user } = useUser();
   const authed = DEV || Boolean(user);
+
+  // coming back from google: finish the sign in, then drop the oauth params from the url
+  useEffect(() => {
+    if (DEV || init !== "finished") return;
+    const url = new URL(window.location.href);
+    (async () => {
+      if (!(await detectSocialRedirectUrl({ url }))) return;
+      await completeSocialRedirect({ url });
+      clearSocialRedirectParams();
+    })().catch((e) => console.error("google sign in", e));
+  }, [init]);
 
   if (!DEV && init !== "finished")
     return (
