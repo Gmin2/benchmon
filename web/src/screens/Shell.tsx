@@ -14,7 +14,7 @@ const NAV: { to: string; label: string; icon: RailIconName }[] = [
   { to: "/home", label: "Home", icon: "home" },
   { to: "/decks", label: "Decks", icon: "decks" },
   { to: "/play", label: "Play", icon: "play" },
-  { to: "/trade", label: "Trade", icon: "trade" },
+  { to: "/watch", label: "Watch", icon: "watch" },
   { to: "/ranks", label: "Ranks", icon: "ranks" },
 ];
 

@@ -1,6 +1,6 @@
 // filled, rounded nav icons drawn for benchmon. the body takes currentColor,
 // the details are cut out in --cut so they read on any tile colour
-export type RailIconName = "home" | "decks" | "play" | "trade" | "ranks" | "settings";
+export type RailIconName = "home" | "decks" | "play" | "watch" | "ranks" | "settings";
 
 const cut = "var(--cut, #16171a)";
 
@@ -29,12 +29,12 @@ const ICONS: Record<RailIconName, React.ReactNode> = {
       <circle cx="16.4" cy="14.9" r="1.25" fill={cut} />
     </>
   ),
-  trade: (
+  watch: (
     <>
-      <rect x="2.8" y="12.4" width="5" height="9" rx="2" fill="currentColor" opacity=".55" />
-      <rect x="9.5" y="8.4" width="5" height="13" rx="2" fill="currentColor" opacity=".78" />
-      <rect x="16.2" y="3.2" width="5" height="18.2" rx="2" fill="currentColor" />
-      <path d="M3.4 9.6 9 5.2l3 2.3 4.4-4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity=".55" />
+      <path d="M8.2 2.6 12 6.2l3.8-3.6" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <rect x="2" y="5.6" width="20" height="14.6" rx="3.6" fill="currentColor" />
+      <path d="M10.2 9.5c0-.8.9-1.3 1.6-.9l4 2.4c.7.4.7 1.4 0 1.8l-4 2.4c-.7.4-1.6-.1-1.6-.9V9.5Z" fill={cut} />
+      <rect x="6.5" y="20.2" width="11" height="1.9" rx=".95" fill="currentColor" opacity=".55" />
     </>
   ),
   ranks: (

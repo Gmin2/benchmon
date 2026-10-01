@@ -8,9 +8,8 @@ import { backedOf, cents, loadHistory, loadMarkets, mon, poolPayout, priceAfter,
 import { useProfiles } from "../profile";
 import { useWallet } from "../useWallet";
 import { AreaChart } from "../ui/chart";
-import { Btn, Chip, Ico, IconBtn, Panel, Seg } from "../ui/kit";
+import { Btn, Chip, Ico, Panel, Seg } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
-import { RailIcon } from "../ui/railIcons";
 import { MatchStage } from "./MatchStage";
 
 const RANGES = ["all", "1h", "10m"] as const;
@@ -47,70 +46,6 @@ function status(m: MarketRow): { label: string; tone: "up" | "down" | "flat" | "
   return { label: "In play", tone: "gold" };
 }
 
-// the chart grows with the window so price, chart and the trade panel sit on one screen
-function useChartHeight() {
-  const calc = () => Math.max(260, Math.min(440, window.innerHeight - 430));
-  const [h, setH] = useState(calc);
-  useEffect(() => {
-    const on = () => setH(calc());
-    addEventListener("resize", on);
-    return () => removeEventListener("resize", on);
-  }, []);
-  return h;
-}
-
-// the match being traded, in one line: both sides, score, where it is
-function MatchStrip({ m, cards, name, watching, onWatch }: { m: MarketRow; cards: Card[]; name: (a: string) => string; watching: boolean; onWatch: () => void }) {
-  const s = status(m);
-  const deckA = deckOf(m.match.deckA, cards);
-  const deckB = deckOf(m.match.deckB, cards);
-  const open = m.match.b === ZERO;
-  const closing = m.match.commitA !== ZERO32 && m.match.commitB !== ZERO32;
-  return (
-    <Panel className="flex flex-wrap items-center gap-x-6 gap-y-3 p-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <DeckStack deck={deckA.slice(0, 3)} size="h-9 w-9" />
-        <div className="min-w-0">
-          <div className="truncate font-semibold">{name(m.match.a)}</div>
-          <div className="text-xs text-mute">side A</div>
-        </div>
-      </div>
-      <div className="text-center">
-        <div className="text-xl font-extrabold">
-          <span className="text-neon">{m.match.winsA}</span>
-          <span className="mx-2 text-dim">:</span>
-          <span className="text-down">{m.match.winsB}</span>
-        </div>
-        <div className="text-xs text-dim">{formatEther(m.match.stake * 2n)} MON pot</div>
-      </div>
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="min-w-0 text-right">
-          <div className="truncate font-semibold">{open ? "open seat" : name(m.match.b)}</div>
-          <div className="text-xs text-mute">side B</div>
-        </div>
-        {!open && <DeckStack deck={deckB.slice(0, 3)} size="h-9 w-9" />}
-      </div>
-      <div className="ml-auto flex items-center gap-3">
-        {m.betting ? (
-          <span className="flex items-center gap-2 rounded-full bg-neon/10 px-3 py-1.5 text-sm font-semibold text-neon">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon/70" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-neon" />
-            </span>
-            {open ? "bets open, waiting for a player" : closing ? "bets close any second" : "bets open until the first reveal"}
-          </span>
-        ) : (
-          <Chip tone={s.tone}>{s.label}</Chip>
-        )}
-        <Btn size="sm" kind={watching ? "neon" : "ghost"} className="h-10" onClick={onWatch}>
-          <RailIcon name="play" className="h-5 w-5" cutColor={watching ? "#b8ff3d" : "#1e1f23"} />
-          {watching ? "Back to chart" : "Watch match"}
-        </Btn>
-      </div>
-    </Panel>
-  );
-}
-
 function TokenBadge({ children }: { children: React.ReactNode }) {
   return <span className="flex h-12 shrink-0 items-center gap-2.5 rounded-2xl border border-line bg-panel px-2.5 pr-3.5">{children}</span>;
 }
@@ -122,15 +57,14 @@ export function Trade() {
   const { data: markets = [], err } = usePoll(() => loadMarkets(12), 4000, []);
   const [params] = useSearchParams();
   const [pick, setPick] = useState<bigint | null>(() => (/^\d+$/.test(params.get("m") ?? "") ? BigInt(params.get("m")!) : null));
-  const [mode, setMode] = useState<"buy" | "sell" | "pool">("buy");
+  // backing a side is the simple bet, so it is what people see first
+  const [mode, setMode] = useState<"buy" | "sell" | "pool">("pool");
   const [side, setSide] = useState<1 | 2>(1);
   const [amount, setAmount] = useState("0.01");
   const [range, setRange] = useState<Range>("all");
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState("");
   const [history, setHistory] = useState<Sample[]>([]);
-  const [watching, setWatching] = useState(false);
-  const chartH = useChartHeight();
 
   // a match you can still bet on first, then one with a market
   const m = markets.find((x) => x.id === pick) ?? markets.find((x) => x.betting) ?? markets.find((x) => x.open) ?? markets[0];
@@ -238,103 +172,124 @@ export function Trade() {
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_440px]">
-      {/* left: market, chart or the live match, then every market */}
+      {/* left: the match is the show, the price and the other matches sit under it */}
       <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <label className="flex items-center gap-2 text-xl font-semibold text-mute">
-              <select value={m ? m.id.toString() : ""} onChange={(e) => setPick(BigInt(e.target.value))} className="cursor-pointer appearance-none bg-transparent pr-1 outline-none" aria-label="market">
-                {markets.map((x) => (
-                  <option key={x.id.toString()} value={x.id.toString()} className="bg-panel text-base">
-                    Match #{x.id.toString()} · side {side === 1 ? "A" : "B"}
-                  </option>
-                ))}
-              </select>
-              <Ico name="chevron-down" className="h-5 w-5" />
-            </label>
-            <div className="mt-1 flex items-center gap-4">
-              <span className="text-[44px] leading-none font-bold tracking-tight">{m?.open ? cents(sidePrice) : "—"}</span>
-              {m?.open && (
-                <Chip tone={change >= 0 ? "up" : "down"}>
-                  {change >= 0 ? "+" : ""}
-                  {(change * 100).toFixed(1)}¢ since open
-                </Chip>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {!watching && <Seg value={range} options={RANGES} onChange={setRange} />}
-            <div className="flex gap-2">
-              <IconBtn name="square-activity-chart" label="chart" active={!watching} onClick={() => setWatching(false)} />
-              <button onClick={() => setWatching(true)} aria-label="watch the match" title="watch the match" className={`grid h-12 w-12 place-items-center rounded-full transition ${watching ? "bg-neon text-bg" : "bg-panel text-mute hover:text-ink"}`}>
-                <RailIcon name="play" className="h-6 w-6" cutColor={watching ? "#b8ff3d" : "#1e1f23"} />
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-2xl font-bold">
+            <select value={m ? m.id.toString() : ""} onChange={(e) => setPick(BigInt(e.target.value))} className="cursor-pointer appearance-none bg-transparent pr-1 outline-none" aria-label="match">
+              {markets.map((x) => (
+                <option key={x.id.toString()} value={x.id.toString()} className="bg-panel text-base">
+                  Match #{x.id.toString()}
+                </option>
+              ))}
+            </select>
+            <Ico name="chevron-down" className="h-5 w-5 text-mute" />
+          </label>
+          {m && (
+            <span className="text-sm text-mute">
+              {name(m.match.a)} vs {m.match.b === ZERO ? "open seat" : name(m.match.b)} · {formatEther(m.match.stake * 2n)} MON pot
+            </span>
+          )}
+          {m &&
+            (m.betting ? (
+              <span className="ml-auto flex items-center gap-2 rounded-full bg-neon/10 px-3 py-1.5 text-sm font-semibold text-neon">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neon/70" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-neon" />
+                </span>
+                {m.match.b === ZERO ? "bets open, waiting for a player" : m.match.commitA !== ZERO32 && m.match.commitB !== ZERO32 ? "bets close any second" : "bets open until the first reveal"}
+              </span>
+            ) : (
+              <span className="ml-auto">
+                <Chip tone={status(m).tone}>{status(m).label}</Chip>
+              </span>
+            ))}
         </div>
 
-        {watching && m ? (
+        {m ? (
           <MatchStage id={m.id} match={m.match} cards={cards} />
-        ) : m?.open ? (
-          <div>
-            <AreaChart data={chartData} format={cents} height={chartH} />
-            {history.length < 3 && <p className="mt-2 text-sm text-dim">history fills in as trades land while this page is open. the full record comes from the indexer.</p>}
-          </div>
         ) : (
-          <div className="grid place-items-center rounded-[var(--radius-panel)] border border-dashed border-line text-mute" style={{ height: chartH }}>
-            {markets.length ? (m?.betting ? "no market on this match yet, back a side in the pool" : "no market was opened for this match") : err ? `retrying: ${err}` : "loading markets"}
-          </div>
+          <Panel className="grid h-[420px] place-items-center text-mute">{err ? `retrying: ${err}` : "loading matches"}</Panel>
         )}
 
-        {m && <MatchStrip m={m} cards={cards} name={name} watching={watching} onWatch={() => setWatching((w) => !w)} />}
-
-        <Panel className="p-6">
-          <h2 className="text-2xl font-semibold">Match markets</h2>
-          <div className="mt-5 grid grid-cols-[minmax(240px,2.2fr)_repeat(4,minmax(0,1fr))] gap-y-1 text-[15px]">
-            {["Match", "Side A", "Side B", "Pool", "Status"].map((h) => (
-              <div key={h} className="pb-3 text-mute">
-                {h}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+          <Panel className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm text-mute">side {side === 1 ? "A" : "B"} price · what the crowd thinks</div>
+                <div className="mt-1 flex items-center gap-3">
+                  <span className="text-[34px] leading-none font-bold tracking-tight">{m?.open ? cents(sidePrice) : "—"}</span>
+                  {m?.open && (
+                    <Chip tone={change >= 0 ? "up" : "down"}>
+                      {change >= 0 ? "+" : ""}
+                      {(change * 100).toFixed(1)}¢
+                    </Chip>
+                  )}
+                </div>
               </div>
-            ))}
-            {markets.map((x) => {
-              const s = status(x);
-              const on = x.id === m?.id;
-              return (
-                <button key={x.id.toString()} onClick={() => setPick(x.id)} className={`col-span-5 grid grid-cols-subgrid items-center rounded-2xl py-3 text-left transition hover:bg-panel-2 ${on ? "bg-panel-2" : ""}`}>
-                  <span className="flex items-center gap-3 pl-2">
-                    <DeckStack deck={deckOf(x.match.deckA, cards).slice(0, 3)} size="h-9 w-9" />
-                    <span className="min-w-0">
-                      <span className="block font-semibold">Match #{x.id.toString()}</span>
-                      <span className="block truncate text-xs whitespace-nowrap text-mute">
+              <Seg value={range} options={RANGES} onChange={setRange} />
+            </div>
+            <div className="mt-3">
+              {m?.open ? (
+                <AreaChart data={chartData} format={cents} height={210} />
+              ) : (
+                <div className="grid h-[210px] place-items-center rounded-2xl border border-dashed border-line text-sm text-mute">{m?.betting ? "no market on this match yet, back a side instead" : "no market on this match"}</div>
+              )}
+            </div>
+          </Panel>
+
+          <Panel className="p-5">
+            <h2 className="text-lg font-bold">Matches</h2>
+            <div className="mt-3 flex max-h-[290px] flex-col gap-1.5 overflow-y-auto">
+              {markets.map((x) => {
+                const s = status(x);
+                const on = x.id === m?.id;
+                return (
+                  <button key={x.id.toString()} onClick={() => setPick(x.id)} className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-panel-2 ${on ? "bg-panel-2" : ""}`}>
+                    <DeckStack deck={deckOf(x.match.deckA, cards).slice(0, 2)} size="h-8 w-8" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">Match #{x.id.toString()}</span>
+                      <span className="block truncate text-xs text-mute">
                         {name(x.match.a)} vs {x.match.b === ZERO ? "open seat" : name(x.match.b)}
                       </span>
                     </span>
-                  </span>
-                  <span>{x.open ? cents(x.priceA) : "—"}</span>
-                  <span>{x.open ? cents(1 - x.priceA) : "—"}</span>
-                  <span>{mon(x.pool + x.poolA + x.poolB, 3)}</span>
-                  <span>
                     <Chip tone={s.tone}>{s.label}</Chip>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Panel>
+                  </button>
+                );
+              })}
+            </div>
+          </Panel>
+        </div>
       </div>
 
-      {/* right: the swap */}
+      {/* right: the bet */}
       <div className="flex flex-col gap-4 xl:sticky xl:top-6 xl:self-start">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-5 text-3xl font-bold tracking-tight">
-            {(["buy", "sell", "pool"] as const).map((k) => (
-              <button key={k} onClick={() => setMode(k)} className={`uppercase ${mode === k ? "text-neon" : "text-dim hover:text-mute"}`}>
-                {k}
+        <h2 className="text-2xl font-bold">Bet on this match</h2>
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-panel p-1">
+          {([
+            ["pool", "Back a side"],
+            ["buy", "Trade shares"],
+          ] as const).map(([k, label]) => {
+            const on = k === "pool" ? mode === "pool" : mode !== "pool";
+            return (
+              <button key={k} onClick={() => setMode(k === "pool" ? "pool" : "buy")} className={`h-11 rounded-full text-sm font-bold transition ${on ? "bg-neon text-bg" : "text-mute hover:text-ink"}`}>
+                {label}
               </button>
-            ))}
-          </div>
-          <IconBtn name="refresh" label="refresh" onClick={() => setHistory(m ? loadHistory(m.id) : [])} />
+            );
+          })}
         </div>
+        {mode !== "pool" && (
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 rounded-full bg-panel p-1">
+              {(["buy", "sell"] as const).map((k) => (
+                <button key={k} onClick={() => setMode(k)} className={`h-8 rounded-full px-4 text-xs font-bold uppercase transition ${mode === k ? "bg-raised text-ink" : "text-dim hover:text-mute"}`}>
+                  {k}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-dim">shares pay 1 MON if their side wins, sell any time before the first reveal</span>
+          </div>
+        )}
 
         {mode !== "pool" ? (
           <>

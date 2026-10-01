@@ -217,8 +217,8 @@ export function Live({ id }: { id: bigint }) {
     return (
       <Panel className="p-8">
         <p className="text-mute">You are not playing in match #{id.toString()}.</p>
-        <Link to="/trade" className="mt-3 inline-block text-neon">
-          watch it on the trade page
+        <Link to="/watch" className="mt-3 inline-block text-neon">
+          watch it on the watch page
         </Link>
       </Panel>
     );

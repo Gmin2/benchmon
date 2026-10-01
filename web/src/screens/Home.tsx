@@ -15,7 +15,7 @@ import { loadMarkets } from "../market";
 import { usePoll } from "../hooks";
 import { faceOf } from "./play/parts";
 
-type Go = (tab: "play" | "trade" | "decks" | "ranks") => void;
+type Go = (tab: "play" | "watch" | "decks" | "ranks") => void;
 const TITLES = ["server room", "chalk hall", "library", "night track", "market", "court"];
 
 // winnings wait in the contract until claimed, so they get a banner until they are
@@ -196,7 +196,7 @@ function Modes({ go }: { go: Go }) {
       body: `${LIVE_MATCHES.length} matches running. Back a side before the first reveal and win with them.`,
       cta: "Watch and back",
       icon: "eye-2",
-      onClick: () => go("trade"),
+      onClick: () => go("watch"),
       art: (
         <div className="flex items-end gap-1">
           <img src={artOf(grok.name, 1)} alt="" className="pixel h-24 w-24 object-contain" />
@@ -242,7 +242,7 @@ function BetsOpen() {
       </div>
       <div className="flex flex-wrap gap-3">
         {open.map((r) => (
-          <button key={r.id.toString()} onClick={() => nav(`/trade?m=${r.id}`)} className="flex items-center gap-4 rounded-2xl bg-panel px-4 py-3 text-left transition hover:bg-panel-2">
+          <button key={r.id.toString()} onClick={() => nav(`/watch?m=${r.id}`)} className="flex items-center gap-4 rounded-2xl bg-panel px-4 py-3 text-left transition hover:bg-panel-2">
             <div>
               <div className="font-semibold">Match #{r.id.toString()}</div>
               <div className="text-xs text-mute">
@@ -334,13 +334,13 @@ export function Home() {
       <section>
         <div className="mb-5 flex items-end justify-between">
           <h2 className="font-display text-4xl uppercase">Live now</h2>
-          <button onClick={() => go("trade")} className="text-sm font-semibold text-mute hover:text-ink">
+          <button onClick={() => go("watch")} className="text-sm font-semibold text-mute hover:text-ink">
             see all ›
           </button>
         </div>
         <div className="-mx-2 flex gap-5 overflow-x-auto px-2 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {LIVE_MATCHES.map((m) => (
-            <LiveCard key={m.id} m={m} onWatch={() => go("trade")} />
+            <LiveCard key={m.id} m={m} onWatch={() => go("watch")} />
           ))}
         </div>
       </section>

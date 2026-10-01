@@ -44,7 +44,8 @@ export default function App() {
         <Route path="/decks" element={<Decks />} />
         <Route path="/play" element={<Play />} />
         <Route path="/play/:id" element={<Play />} />
-        <Route path="/trade" element={<Trade />} />
+        <Route path="/watch" element={<Trade />} />
+        <Route path="/trade" element={<Navigate to="/watch" replace />} />
         <Route path="/ranks" element={<Ranks />} />
         {authed && <Route path="/:at" element={<ProfilePage />} />}
       </Route>
