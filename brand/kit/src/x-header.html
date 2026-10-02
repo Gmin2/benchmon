@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:"Jakarta";src:url("../../../web/public/fonts/jakarta.woff2") format("woff2");font-weight:400 800}
+*{box-sizing:border-box} body{margin:0}
+.h{position:relative;width:1500px;height:500px;overflow:hidden;background:#101113;font-family:Jakarta,sans-serif;color:#fff}
+.arena{position:absolute;inset:-20px 0 auto 0;width:1500px;height:844px;top:-200px;image-rendering:pixelated}
+.shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,12,14,.35) 0%,rgba(12,12,14,.55) 40%,rgba(12,12,14,.9) 62%,rgba(12,12,14,.92) 100%),linear-gradient(180deg,rgba(12,12,14,.2),rgba(12,12,14,.55))}
+.fan{position:absolute;left:330px;bottom:40px;display:flex;align-items:flex-end}
+.fan img{width:150px;height:150px;image-rendering:pixelated;margin-left:-38px;filter:drop-shadow(0 12px 8px rgba(0,0,0,.6))}
+.fan img:first-child{margin-left:0}
+.fan img.big{width:196px;height:196px}
+.right{position:absolute;right:56px;top:50%;transform:translateY(-50%);width:560px;text-align:center}
+.logo{width:540px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55))}
+.tag{margin-top:8px;font-size:28px;font-weight:700;letter-spacing:-.01em}
+.tag b{color:#b8ff3d}
+.chips{margin-top:16px;display:flex;gap:10px;justify-content:center}
+.chips span{padding:7px 15px;border-radius:999px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.1);font-size:17px;font-weight:700}
+.chips i{font-style:normal;color:#b8ff3d}
+</style></head><body><div class="h">
+<img class="arena" src="../../../web/public/art/arenas/reasoning@1x.png">
+<div class="shade"></div>
+<div class="fan">
+<img src="../../../web/public/art/cards/gemini-3.8-flash-t3-plain@1x.png">
+<img src="../../../web/public/art/cards/claude-opus-5.5-t3-plain@1x.png">
+<img class="big" src="../../../web/public/art/cards/kimi-k3-t3-plain@1x.png">
+<img src="../../../web/public/art/cards/grok-4.20-t3-plain@1x.png">
+</div>
+<div class="right">
+<img class="logo" src="../../logo/benchmon-logo-mon-purple.svg">
+<div class="tag">every card is a <b>real AI model</b></div>
+<div class="chips"><span>stake</span><span>battle</span><span><i>live AI duels</i></span><span>on <i>monad</i></span></div>
+</div>
+</div></body></html>

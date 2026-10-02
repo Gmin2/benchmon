@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box} body{margin:0}
+.a{position:relative;width:400px;height:400px;overflow:hidden;background:radial-gradient(circle at 50% 38%,#2a2550 0%,#16171a 70%)}
+.slab{position:absolute;left:0;right:0;top:268px;bottom:0;background:#b8ff3d;border-top:10px solid #101113}
+.slab:before{content:"";position:absolute;left:0;right:0;top:0;height:8px;background:#f6ffd9}
+.slab:after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:#4b33c9}
+.mon{position:absolute;left:50%;top:76px;transform:translateX(-50%)}
+.paws{position:absolute;left:50%;top:252px;transform:translateX(-50%)}
+</style></head><body><div class="a"><div class="slab"></div><div class="mon" id="m"></div><div class="paws" id="p"></div></div>
+<script>
+const PAL={k:"#101113",L:"#b9a8ff",g:"#7b62ff",s:"#4b33c9",w:"#ffffff",b:"#b8ff3d",P:"#101113"};
+const HEAD=["...kk............kk...","..kLgk..........kgsk..","..kLggk........kggsk..",".kLLgggkkkkkkkkgggssk.",".kLLggggggggggggggssk.",".kLggggggggggggggggsk.","kLLgwwwwggggggwwwwgssk","kLggwkkwggggggwkkwgssk","kLggwkkwggggggwkkwgssk","kLggwwwwggggggwwwwgssk","kLgbbgggggggggggbbgssk","kggggggggkPPkggggggssk","kgggggggggkkgggggggssk","kgggggggggggggggggsssk"];
+const PAW=[".kkkkk.","kLLggsk","kLggggk","kgkgkgk",".k.k.k."];
+function svg(rows,px,w){let r="";rows.forEach((row,y)=>[...row].forEach((c,x)=>{if(c!==".")r+=`<rect x="${x*px}" y="${y*px}" width="${px+.5}" height="${px+.5}" fill="${PAL[c]}"/>`}));return `<svg width="${w*px}" height="${rows.length*px}" shape-rendering="crispEdges">${r}</svg>`}
+const px=12;document.getElementById('m').innerHTML=svg(HEAD,px,22);
+const paws=PAW.map((r)=>r+"..........."+r);document.getElementById('p').innerHTML=svg(paws,px,25);
+</script></body></html>
