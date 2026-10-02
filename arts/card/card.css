@@ -1,0 +1,499 @@
+@font-face { font-family: "PolySans"; src: url("fonts/PolySansNeutral_ydvq84-d24292.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "PolySans"; src: url("fonts/PolySansMedian_g0tsa4-47e394.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "PolySansWide"; src: url("fonts/PolySansMedianWide_cqzgag-a69f23.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "NB Arkitekt"; src: url("fonts/nb_architekt_r_regularwebfont_f2xtaz-9b3684.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "NB Arkitekt"; src: url("fonts/nb_architekt_r_boldwebfont_klo1os-478016.woff2") format("woff2"); font-weight: 700; }
+
+:root {
+  --gray-0: hsl(0 0% 0%);
+  --gray-5: hsl(0 0% 5%);
+  --gray-10: hsl(0 0% 10%);
+  --gray-15: hsl(0 0% 15%);
+  --gray-20: hsl(0 0% 20%);
+  --gray-30: hsl(0 0% 30%);
+  --gray-50: hsl(0 0% 50%);
+  --gray-70: hsl(0 0% 70%);
+  --gray-85: hsl(0 0% 85%);
+  --gray-95: hsl(0 0% 95%);
+  --lime: hsl(76 87% 67%);
+  --lime-dim: hsl(76 60% 40%);
+  --loss: hsl(4 80% 62%);
+  --gold-1: #fff3b0;
+  --gold-2: #f2c94c;
+  --gold-3: #b7842a;
+  --gold-4: #fff8d6;
+  --silver-1: #f5f7fa;
+  --silver-2: #aab3bf;
+  --silver-3: #6d7580;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+/* ---------- shell ---------- */
+
+.bm-card {
+  --lab: #888;
+  --lab2: #ddd;
+  --notch: .7em;
+  --rx: 0deg;
+  --ry: 0deg;
+  --mx: 50%;
+  --my: 50%;
+  font-size: 15px;
+  width: 18em;
+  aspect-ratio: 5 / 7.4;
+  position: relative;
+  perspective: 900px;
+  font-family: "PolySans", ui-sans-serif, system-ui, sans-serif;
+  color: var(--gray-95);
+  user-select: none;
+  flex: none;
+}
+.bm-card.size-full { font-size: 20px; }
+.bm-card.size-hand { font-size: 15px; }
+.bm-card.size-tile { font-size: 11px; }
+.bm-card.size-mini { font-size: 8px; }
+
+.bm-card .inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform .5s var(--ease), translate .25s var(--ease), filter .3s var(--ease);
+}
+.bm-card.is-facedown .inner { transform: rotateY(180deg); }
+
+.bm-card .side {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  clip-path: polygon(var(--notch) 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, var(--notch) 100%, 0 calc(100% - var(--notch)), 0 var(--notch));
+}
+.bm-card .back { transform: rotateY(180deg); }
+
+/* rarity frame: the side is the border, the face sits inside it */
+.bm-card .front { padding: .32em; background: var(--gray-30); }
+.bm-card.rarity-rare .front {
+  background: linear-gradient(135deg, var(--silver-1), var(--silver-3) 30%, var(--silver-1) 50%, var(--silver-2) 70%, var(--silver-3));
+}
+.bm-card.rarity-legendary .front {
+  background: linear-gradient(120deg, var(--gold-3), var(--gold-1) 18%, var(--gold-2) 35%, var(--gold-4) 50%, var(--gold-2) 65%, var(--gold-1) 82%, var(--gold-3));
+  background-size: 250% 250%;
+  animation: gold-drift 6s linear infinite;
+}
+@keyframes gold-drift { to { background-position: 250% 250%; } }
+
+.bm-card .face {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--gray-10);
+  clip-path: polygon(calc(var(--notch) - .1em) 0, calc(100% - var(--notch) + .1em) 0, 100% calc(var(--notch) - .1em), 100% calc(100% - var(--notch) + .1em), calc(100% - var(--notch) + .1em) 100%, calc(var(--notch) - .1em) 100%, 0 calc(100% - var(--notch) + .1em), 0 calc(var(--notch) - .1em));
+  overflow: hidden;
+}
+
+/* ---------- header ---------- */
+
+.bm-card .head {
+  display: flex;
+  align-items: center;
+  gap: .45em;
+  padding: .55em .6em .45em;
+}
+.bm-card .mark { width: 1.6em; height: 1.6em; display: grid; place-items: center; flex: none; }
+.bm-card .mark .px { width: 100%; height: 100%; image-rendering: pixelated; }
+.bm-card .title { min-width: 0; flex: 1; line-height: 1.05; }
+.bm-card .title h3 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1em;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bm-card .title .lab {
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-size: .56em;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--gray-70);
+}
+.bm-card .power {
+  display: flex;
+  align-items: center;
+  gap: .25em;
+  padding: .2em .45em .2em .35em;
+  border-radius: 99em;
+  background: var(--gray-20);
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-weight: 700;
+  font-size: .8em;
+  color: var(--gray-95);
+  flex: none;
+}
+.bm-card .power .px { width: .8em; height: .8em; color: var(--lime); }
+
+/* ---------- art window ---------- */
+
+.bm-card .art {
+  position: relative;
+  margin: 0 .45em;
+  height: 44%;
+  flex: none;
+  border-radius: .35em;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 105%, color-mix(in oklab, var(--lab) 70%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in oklab, var(--lab) 22%, var(--gray-10)), color-mix(in oklab, var(--lab) 40%, var(--gray-5)));
+  isolation: isolate;
+}
+/* coarse dither so the ground reads as pixel art, not a smooth gradient */
+.bm-card .art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: conic-gradient(rgba(255, 255, 255, .07) 25%, transparent 0 50%, rgba(255, 255, 255, .07) 0 75%, transparent 0);
+  background-size: .5em .5em;
+  mask-image: linear-gradient(180deg, transparent 30%, #000);
+  z-index: 0;
+}
+/* floor line and the shadow the sprite stands on */
+.bm-card .art::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 6%;
+  height: 7%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .38);
+  z-index: 1;
+}
+.bm-card .sprite {
+  position: absolute;
+  left: 50%;
+  bottom: -3%;
+  height: 108%;
+  translate: -50% 0;
+  image-rendering: pixelated;
+  z-index: 2;
+  pointer-events: none;
+}
+.bm-card .chip {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: .3em;
+  padding: .22em .45em .22em .32em;
+  border-radius: 99em;
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-size: .56em;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: rgba(10, 10, 10, .72);
+  backdrop-filter: blur(4px);
+}
+.bm-card .chip .px { width: 1.3em; height: 1.3em; }
+.bm-card .chip.type { left: .5em; top: .5em; }
+.bm-card .chip.type.reasoning .px { color: #b9a4ff; }
+.bm-card .chip.type.speed .px { color: #ffd84a; }
+.bm-card .chip.type.cost .px { color: #7be0a8; }
+.bm-card .chip.rarity { right: .5em; top: .5em; }
+.bm-card.rarity-common .chip.rarity .px { color: var(--gray-70); }
+.bm-card.rarity-rare .chip.rarity .px { color: #9fd3ff; }
+.bm-card.rarity-legendary .chip.rarity .px { color: var(--gold-2); }
+.bm-card .chip.matchup { left: .5em; bottom: .5em; display: none; }
+.bm-card .chip.matchup.good { color: var(--lime); }
+.bm-card .chip.matchup.bad { color: var(--loss); }
+.bm-card .chip.matchup .px { width: 1.1em; height: 1.1em; }
+.bm-card .chip.matchup.bad .px { rotate: 180deg; }
+.bm-card.show-matchup .chip.matchup { display: flex; }
+
+/* holo: a rainbow sheen that follows the pointer, legendary gets the full foil, rare a soft silver */
+.bm-card .holo {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: color-dodge;
+  transition: opacity .3s var(--ease);
+}
+.bm-card.rarity-legendary .holo {
+  opacity: .1;
+  background:
+    radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, .55), transparent 40%),
+    repeating-linear-gradient(115deg, #ff7aa8 0%, #ffd36b 7%, #7bffb0 14%, #6bc8ff 21%, #c58bff 28%, #ff7aa8 35%);
+  background-size: 100% 100%, 300% 300%;
+  background-position: 0 0, var(--mx) var(--my);
+}
+.bm-card.rarity-rare .holo {
+  opacity: .08;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(220, 235, 255, .7), transparent 45%),
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+  background-size: 100% 100%, 250% 250%;
+  background-position: 0 0, var(--mx) var(--my);
+}
+.bm-card:hover .holo { opacity: .38; }
+.bm-card.rarity-common:hover .holo { opacity: 0; }
+
+/* ---------- stats ---------- */
+
+.bm-card .stats {
+  list-style: none;
+  margin: .5em .55em 0;
+  padding: 0;
+  display: grid;
+  gap: .22em;
+  flex: 1;
+  align-content: start;
+}
+.bm-card .stat {
+  display: grid;
+  grid-template-columns: 1em 6.2em 1fr 1.6em;
+  align-items: center;
+  gap: .4em;
+  padding: .12em .3em;
+  border-radius: .25em;
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-size: .68em;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--gray-70);
+}
+.bm-card .stat .px { width: 1em; height: 1em; color: var(--gray-85); }
+.bm-card .stat b { font-weight: 700; color: var(--gray-95); text-align: right; font-size: 1.12em; }
+.bm-card .bar {
+  height: .55em;
+  background: var(--gray-20);
+  position: relative;
+  /* 20 cells, so the bar reads as pixels rather than a smooth fill */
+  mask-image: repeating-linear-gradient(90deg, #000 0 calc(5% - .12em), transparent calc(5% - .12em) 5%);
+}
+.bm-card .bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 100%);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--lab) 55%, var(--gray-85)), var(--gray-95));
+  transition: width .6s var(--ease);
+}
+.bm-card .stat.is-arena { background: color-mix(in oklab, var(--lime) 14%, transparent); color: var(--lime); }
+.bm-card .stat.is-arena .px, .bm-card .stat.is-arena b { color: var(--lime); }
+.bm-card .stat.is-arena .bar i { background: var(--lime); }
+.bm-card .stat .delta { display: none; }
+.bm-card .stat.has-delta .delta {
+  display: inline;
+  margin-left: .3em;
+  font-size: .85em;
+  color: var(--lime);
+}
+.bm-card .stat.has-delta.down .delta { color: var(--loss); }
+
+/* ---------- footer ---------- */
+
+.bm-card .foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .4em;
+  padding: .45em .6em .55em;
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-size: .5em;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--gray-50);
+}
+.bm-card .evo {
+  display: flex;
+  align-items: center;
+  gap: .35em;
+  padding: .25em .55em .25em .4em;
+  border-radius: 99em;
+  background: color-mix(in oklab, var(--lime) 16%, var(--gray-15));
+  color: var(--lime);
+  font-size: 1.1em;
+}
+.bm-card .evo .px { width: 1.1em; height: 1.1em; }
+.bm-card .evo.down { background: color-mix(in oklab, var(--loss) 16%, var(--gray-15)); color: var(--loss); }
+.bm-card .evo.down .px { rotate: 180deg; }
+.bm-card .serial { color: var(--gray-50); }
+
+/* ---------- back ---------- */
+
+.bm-card .back {
+  padding: .32em;
+  background: linear-gradient(135deg, var(--b-deep), var(--b-main) 30%, var(--b-deep) 55%, var(--b-main) 80%, var(--b-deep));
+}
+.bm-card .back-theirs { background: linear-gradient(135deg, #3a3f46, #9aa3ad 30%, #4a5058 55%, #9aa3ad 80%, #3a3f46); }
+.bm-card .back .face {
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(70% 55% at 50% 45%, color-mix(in oklab, var(--b-main) 18%, var(--gray-10)), var(--gray-5));
+}
+.bm-card .back .b-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: var(--b-pattern);
+  background-size: 1.4em 1.4em;
+  mask-image: radial-gradient(55% 42% at 50% 46%, transparent 45%, #000 80%);
+}
+.bm-card .back .b-ring {
+  position: absolute;
+  inset: .55em;
+  border: .12em solid color-mix(in oklab, var(--b-main) 45%, transparent);
+  --n: calc(var(--notch) - .25em);
+  clip-path: polygon(var(--n) 0, calc(100% - var(--n)) 0, 100% var(--n), 100% calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%, 0 calc(100% - var(--n)), 0 var(--n));
+}
+.bm-card .back .b-ring::before, .bm-card .back .b-ring::after {
+  content: "";
+  position: absolute;
+  width: .5em;
+  height: .5em;
+  background: var(--b-edge);
+  left: 50%;
+  translate: -50% -50%;
+  rotate: 45deg;
+}
+.bm-card .back .b-ring::before { top: 0; }
+.bm-card .back .b-ring::after { top: 100%; }
+.bm-card .back .b-top, .bm-card .back .b-bottom {
+  position: absolute;
+  left: 1.3em;
+  right: 1.3em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .4em;
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-size: .5em;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--b-main) 70%, var(--gray-50));
+}
+.bm-card .back .b-top span, .bm-card .back .b-bottom { background: var(--gray-10); padding: .25em .5em; border-radius: .3em; }
+.bm-card .back .b-bottom { left: 50%; right: auto; translate: -50% 0; white-space: nowrap; }
+.bm-card .back .b-top { top: 2.4em; }
+.bm-card .back .b-bottom { bottom: 2.6em; justify-content: center; }
+.bm-card .back .lockdot { width: .7em; height: .7em; background: var(--b-edge); display: inline-block; }
+.bm-card .back .crest {
+  width: 46%;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 0 1.2em color-mix(in oklab, var(--b-main) 45%, transparent));
+}
+.bm-card .back .crest .px { width: 100%; height: 100%; }
+.bm-card .back .word {
+  margin-top: .9em;
+  font-family: "PolySansWide", "PolySans", sans-serif;
+  font-weight: 600;
+  letter-spacing: .18em;
+  font-size: .82em;
+  color: var(--gray-85);
+}
+.bm-card .back .scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(180deg, transparent 0 45%, color-mix(in oklab, var(--b-main) 70%, transparent) 50%, transparent 55% 100%);
+  background-size: 100% 220%;
+}
+.bm-card.is-locking .back .scan { animation: scan 1s var(--ease) .35s both; }
+.bm-card.is-locking .back .crest { animation: crest-in .9s var(--ease) .45s both; }
+@keyframes scan {
+  0% { opacity: 1; background-position: 0 100%; }
+  100% { opacity: 0; background-position: 0 -20%; }
+}
+@keyframes crest-in {
+  0% { scale: .7; filter: brightness(2.4) drop-shadow(0 0 2em var(--b-main)); }
+  100% { scale: 1; }
+}
+
+/* ---------- sizes ---------- */
+
+.bm-card.size-tile .foot, .bm-card.size-mini .foot { display: none; }
+.bm-card.size-tile .stat { grid-template-columns: 1em 1fr 1.8em; }
+.bm-card.size-tile .stat .k { display: none; }
+.bm-card.size-mini { aspect-ratio: 5 / 6.2; }
+.bm-card.size-mini .stats, .bm-card.size-mini .chip, .bm-card.size-mini .title .lab { display: none; }
+.bm-card.size-mini .art { height: 72%; }
+
+/* ---------- states ---------- */
+
+.bm-card { transition: translate .25s var(--ease), filter .3s var(--ease); }
+.bm-card.is-selected { translate: 0 -.6em; }
+.bm-card.is-selected { isolation: isolate; }
+.bm-card.is-selected::before {
+  content: "";
+  position: absolute;
+  inset: -.28em;
+  z-index: -1;
+  background: var(--lime);
+  --n: calc(var(--notch) + .12em);
+  clip-path: polygon(var(--n) 0, calc(100% - var(--n)) 0, 100% var(--n), 100% calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%, 0 calc(100% - var(--n)), 0 var(--n));
+  box-shadow: 0 0 1.5em var(--lime);
+  pointer-events: none;
+}
+
+.bm-card .overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  place-items: center;
+  pointer-events: none;
+}
+.bm-card .overlay .tag {
+  display: flex;
+  align-items: center;
+  gap: .4em;
+  padding: .4em .8em;
+  border-radius: 99em;
+  font-family: "NB Arkitekt", ui-monospace, monospace;
+  font-weight: 700;
+  font-size: .7em;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: var(--gray-5);
+  color: var(--gray-95);
+  box-shadow: 0 .3em 1em rgba(0, 0, 0, .5);
+}
+.bm-card .overlay .tag .px { width: 1.1em; height: 1.1em; }
+
+.bm-card.is-locked .inner { filter: grayscale(1) brightness(.55); }
+.bm-card.is-locked .overlay { display: grid; }
+.bm-card.is-used .inner { filter: grayscale(.8) brightness(.45); }
+.bm-card.is-used .overlay { display: grid; }
+.bm-card.is-loser .inner { filter: grayscale(.85) brightness(.5); }
+.bm-card.is-loser .overlay { display: grid; }
+.bm-card.is-loser .overlay .tag { color: var(--loss); }
+
+.bm-card.is-winner .inner { filter: drop-shadow(0 0 .8em color-mix(in oklab, var(--lime) 70%, transparent)); }
+.bm-card.is-winner .overlay { display: grid; place-items: start center; }
+.bm-card.is-winner .overlay .tag { margin-top: -.9em; background: var(--lime); color: var(--gray-10); }
+
+.bm-card.is-duel .front { animation: duel-pulse 1.4s ease-in-out infinite; }
+.bm-card.is-duel .overlay { display: grid; place-items: end center; }
+.bm-card.is-duel .overlay .tag { margin-bottom: -.9em; }
+.bm-card.is-duel .overlay .tag i { display: inline-block; width: .35em; height: .35em; border-radius: 50%; background: var(--lime); animation: blink 1s steps(2) infinite; }
+@keyframes duel-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; filter: none; }
+  50% { filter: drop-shadow(0 0 .5em color-mix(in oklab, var(--lime) 60%, transparent)); }
+}
+@keyframes blink { 50% { opacity: .2; } }
+
+.bm-card.is-evolved .inner { animation: evolve 1.6s var(--ease) both; }
+.bm-card.is-evolved .overlay { display: grid; place-items: start center; }
+.bm-card.is-evolved .overlay .tag { margin-top: -.9em; background: var(--gold-2); color: var(--gray-10); }
+@keyframes evolve {
+  0% { filter: brightness(1); }
+  20% { filter: brightness(2.2) drop-shadow(0 0 1.2em var(--gold-2)); }
+  60% { filter: brightness(1.2) drop-shadow(0 0 .8em var(--gold-2)); }
+  100% { filter: drop-shadow(0 0 .5em color-mix(in oklab, var(--gold-2) 60%, transparent)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-card .inner, .bm-card { transition: none; }
+  .bm-card.rarity-legendary .front, .bm-card.is-duel .front, .bm-card.is-evolved .inner { animation: none; }
+}

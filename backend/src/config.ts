@@ -20,8 +20,8 @@ export const config = {
   duelsDir: process.env.DUELS_DIR ?? new URL("../../tmp/duels/", import.meta.url).pathname,
   contracts: {
     cards: (process.env.CARDS ?? "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb") as Address,
-    duel: (process.env.DUEL ?? "0x1B9E807c7e738779998e943879132CA03B603ccb") as Address,
-    backing: (process.env.BACKING ?? "0x6807C5681B77A28CF1E177f6C4518A9730771238") as Address,
-    market: (process.env.MARKET ?? "0xC3cd445e804FEC26d873D736eA284F33dB275dC8") as Address,
+    duel: (process.env.DUEL ?? "0xC110B9Ee0845Ed76D722Ccec3111302D56d1cA61") as Address,
+    backing: (process.env.BACKING ?? "0x966B8773B281589bFE3E83C7153a64B7E192a9F5") as Address,
+    market: (process.env.MARKET ?? "0x52CE235DCF1Afa5d4AF427BE9Df039c7797Fa35B") as Address,
   },
 };

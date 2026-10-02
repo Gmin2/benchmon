@@ -1,1 +1,82 @@
 @import "tailwindcss";
+
+@font-face { font-family: "Jakarta"; src: url("/fonts/jakarta.woff2") format("woff2"); font-weight: 400 800; font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/fonts/anton.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+/* dashboard look: charcoal panels, neon lime, big rounded shapes */
+@theme {
+  --color-neon: #b8ff3d;
+  --color-neon-hi: #d6ff85;
+  --color-neon-deep: #203306;
+  --color-bg: #101113;
+  --color-app: #16171a;
+  --color-panel: #1e1f23;
+  --color-panel-2: #26272c;
+  --color-raised: #2d2e34;
+  --color-line: #2c2d33;
+  --color-ink: #f4f5f7;
+  --color-mute: #8b8d94;
+  --color-dim: #5c5e66;
+  --color-up: #b8ff3d;
+  --color-down: #ff5d5d;
+  --color-down-bg: #4a1d20;
+  --color-gold: #f2c94c;
+  --font-sans: "Jakarta", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Anton", "Jakarta", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --radius-panel: 24px;
+}
+
+/* names the card stylesheet reads */
+:root {
+  color-scheme: dark;
+  --gray-0: #000;
+  --gray-5: #101113;
+  --gray-10: #16171a;
+  --gray-15: #232428;
+  --gray-20: #2d2e34;
+  --gray-30: #45464d;
+  --gray-50: #7a7c83;
+  --gray-70: #a8aab0;
+  --gray-85: #d9dadd;
+  --gray-95: #f4f5f7;
+  --lime: #b8ff3d;
+  --loss: #ff5d5d;
+  --card-display: "Jakarta", sans-serif;
+  --card-mono: "Geist Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  html, body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); }
+  body { min-height: 100svh; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
+  ::selection { background: var(--color-neon); color: var(--color-bg); }
+  button { cursor: pointer; }
+}
+
+.ico { display: inline-flex; }
+.ico > svg { width: 100%; height: 100%; }
+.glow-neon { box-shadow: 0 10px 40px -12px rgba(184, 255, 61, 0.55); }
+
+.pixel { image-rendering: pixelated; }
+
+/* animations */
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes float { 50% { transform: translateY(-14px); } }
+@keyframes spin-slow { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { [class*="animate-[float"], [class*="animate-[spin-slow"] { animation: none !important; } }
+@keyframes hero-in { from { opacity: 0; transform: translateY(24px) scale(.92); } }
+
+/* the mon on the login dialog and the wallet screen */
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@keyframes mon-bob { 50% { transform: translateY(2px); } }
+@keyframes mon-hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(0); } 85% { transform: translateY(-4px); } }
+@keyframes mon-peek { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes paws-up { from { transform: translateY(8px); } to { transform: translateY(0); } }
+.mon-paws-up { animation: paws-up .22s cubic-bezier(.2, .7, .2, 1) both; }
+.mon-bob { animation: mon-bob 2.6s ease-in-out infinite; }
+.mon-hop { animation: mon-hop .7s cubic-bezier(.2, .7, .2, 1) both; }
+.mon-shake { animation: shake .4s ease both; }
+@media (prefers-reduced-motion: reduce) { .mon-bob, .mon-hop, .mon-shake, .mon-paws-up { animation: none !important; } }

@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Jakarta"; src: url("../../web/public/fonts/jakarta.woff2") format("woff2"); font-weight: 400 800; }
+@font-face { font-family: "Anton"; src: url("../../web/public/fonts/anton.woff2") format("woff2"); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.og { position: relative; width: 1200px; height: 630px; overflow: hidden; background: #101113; font-family: Jakarta, sans-serif; color: #fff; }
+.arena { position: absolute; left: 0; top: -40px; width: 1200px; height: 675px; image-rendering: pixelated; }
+.shade { position: absolute; inset: 0; background:
+  linear-gradient(180deg, rgba(12,12,14,.86) 0%, rgba(12,12,14,.62) 42%, rgba(12,12,14,.08) 66%, rgba(12,12,14,.35) 100%),
+  radial-gradient(ellipse at 50% 120%, rgba(184,255,61,.18), transparent 60%); }
+.logo { position: absolute; left: 50%; top: 26px; width: 780px; transform: translateX(-50%); filter: drop-shadow(0 10px 18px rgba(0,0,0,.55)); }
+.tag { position: absolute; left: 0; right: 0; top: 292px; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 3px 10px rgba(0,0,0,.6); }
+.tag b { color: #b8ff3d; font-weight: 800; }
+.fighter { position: absolute; bottom: 58px; width: 216px; height: 216px; image-rendering: pixelated; filter: drop-shadow(0 14px 10px rgba(0,0,0,.55)); }
+.a { left: 252px; }
+.b { right: 236px; transform: scaleX(-1); }
+.vs { position: absolute; left: 50%; bottom: 134px; transform: translateX(-50%); font-family: Anton, sans-serif; font-size: 92px; line-height: 1; color: #fff;
+  -webkit-text-stroke: 10px #101113; paint-order: stroke fill; text-shadow: 0 6px 0 #4b33c9; }
+.chip { position: absolute; bottom: 18px; padding: 8px 16px; border-radius: 999px; background: rgba(16,17,19,.82); font-size: 19px; font-weight: 700; border: 2px solid rgba(255,255,255,.08); }
+.chip.l { left: 36px; } .chip.r { right: 36px; }
+.chip i { font-style: normal; color: #b8ff3d; }
+</style></head><body>
+<div class="og">
+  <img class="arena" src="../../web/public/art/arenas/code@1x.png">
+  <div class="shade"></div>
+  <img class="logo" src="../logo/benchmon-logo-mon-purple.svg">
+  <div class="tag">the card game where every card is a <b>real AI model</b></div>
+  <img class="fighter a" src="../../web/public/art/cards/claude-opus-5.5-t3-plain@1x.png">
+  <img class="fighter b" src="../../web/public/art/cards/grok-4.20-t3-plain@1x.png">
+  <div class="vs">VS</div>
+  <div class="chip l">stake · battle · <i>live AI duels</i></div>
+  <div class="chip r">on <i>monad</i></div>
+</div>
+</body></html>

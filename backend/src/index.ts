@@ -1,8 +1,10 @@
 import { config } from "./config";
 import { judge, pub } from "./chain";
 import { duelAbi } from "./abi";
-import { watchLiveDuels } from "./watcher";
+import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
+import { houseLoop } from "./house";
+import { checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 
 const cors = {
@@ -22,10 +24,37 @@ const server = Bun.serve({
       const err = await addPick(p);
       return Response.json(err ? { ok: false, error: err } : { ok: true }, { status: err ? 400 : 200, headers: cors });
     }
+    // player profiles: claim a username, look one up by name or address, check if a name is free
+    if (url.pathname === "/profile" && req.method === "POST") {
+      const r = await claim(await req.json().catch(() => null));
+      return typeof r === "string" ? Response.json({ ok: false, error: r }, { status: 400, headers: cors }) : Response.json({ ok: true, profile: r }, { headers: cors });
+    }
+    const prof = url.pathname.match(/^\/profile\/(@?[\w.]+)$/);
+    if (prof) {
+      const key = prof[1]!;
+      const p = key.startsWith("@") ? profileByName(key.slice(1)) : profileOf(key);
+      return p ? Response.json(p, { headers: cors }) : Response.json({ error: "no profile" }, { status: 404, headers: cors });
+    }
+    if (url.pathname === "/profiles") {
+      const list = (url.searchParams.get("addresses") ?? "").split(",").filter(Boolean).slice(0, 50);
+      return Response.json(list.map(profileOf).filter(Boolean), { headers: cors });
+    }
+    const name = url.pathname.match(/^\/username\/([^/]+)$/);
+    if (name) {
+      const err = checkName(decodeURIComponent(name[1]!).toLowerCase(), url.searchParams.get("for") ?? undefined);
+      return Response.json({ free: !err, reason: err }, { headers: cors });
+    }
     // the card stats the chainlink workflow reads, built by scripts/stats.ts
     if (url.pathname === "/stats") {
       const f = Bun.file(new URL("../data/stats.json", import.meta.url).pathname);
       if (!(await f.exists())) return Response.json({ error: "no stats built yet" }, { status: 404, headers: cors });
+      return new Response(f, { headers: { ...cors, "content-type": "application/json" } });
+    }
+    // the live duel transcript: prompt, both answers, timing, cost and the verdict reason
+    const duel = url.pathname.match(/^\/duel\/(\d+)$/);
+    if (duel) {
+      const f = Bun.file(`${config.duelsDir}${duel[1]}.json`);
+      if (!(await f.exists())) return Response.json({ error: "no transcript yet" }, { status: 404, headers: cors });
       return new Response(f, { headers: { ...cors, "content-type": "application/json" } });
     }
     if (url.pathname === "/health") {
@@ -48,11 +77,43 @@ const server = Bun.serve({
 
 console.log(`backend on :${server.port}, judge ${judge.address}`);
 
-watchLiveDuels(async (d) => {
+// a model or the judge can fail for a moment, so try a few times before leaving it to settleLiveByStats
+const judging = new Set<string>();
+async function handle(d: LiveDuel) {
+  const key = d.id.toString();
+  if (judging.has(key)) return;
+  judging.add(key);
   console.log(`live duel ${d.id}: card ${d.cardA} vs ${d.cardB}, arena ${d.arena}, block ${d.block}`);
-  const r = await judgeLiveDuel(d);
-  console.log(`match ${d.id} settled`, r);
-});
+  try {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const r = await judgeLiveDuel(d);
+        console.log(`match ${d.id} settled`, r);
+        return;
+      } catch (e) {
+        console.error(`duel ${d.id} attempt ${attempt} failed: ${(e as Error).message.split("\n")[0]}`);
+        await Bun.sleep(attempt * 5000);
+      }
+    }
+  } finally {
+    judging.delete(key);
+  }
+}
+
+// duels that went live while the backend was down are still waiting for a verdict
+async function catchUp(scan = 50n) {
+  const count = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "matchCount" });
+  for (let id = count - 1n; id >= 0n && id >= count - scan; id--) {
+    const m = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
+    if (m.awaitingVerdict) handle({ id, cardA: m.cardA, cardB: m.cardB, arena: m.arena, block: 0n });
+  }
+}
+
+watchLiveDuels(handle);
+catchUp().catch((e) => console.error(`catch up failed: ${(e as Error).message.split("\n")[0]}`));
 
 await loadPicks();
+await loadProfiles();
 relayLoop();
+// HOUSE=0 runs the backend without seeding markets
+if (process.env.HOUSE !== "0") houseLoop();

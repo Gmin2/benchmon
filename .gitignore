@@ -6,3 +6,7 @@ contracts/cache
 contracts/broadcast
 tmp/
 contracts/foundry-pp
+brand/references/
+brand/concepts/
+brand/out/
+brand/logo-board.*

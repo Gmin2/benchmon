@@ -123,6 +123,12 @@ indexer.onEvent({ contract: "Duel", event: "RoundWon" }, async ({ event, context
   }
 });
 
+// the loser of a round picked the next arena, or it was drawn from the offer after the pick timed out
+indexer.onEvent({ contract: "Duel", event: "ArenaPicked" }, async ({ event, context }) => {
+  const m = await context.Match.get(event.params.id.toString());
+  if (m) context.Match.set({ ...m, arena: n(event.params.arena) });
+});
+
 indexer.onEvent({ contract: "Duel", event: "Finished", fields: { block: ["timestamp"] } }, async ({ event, context }) => {
   const id = event.params.id.toString();
   const m = await context.Match.get(id);

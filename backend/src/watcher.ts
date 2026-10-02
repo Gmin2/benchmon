@@ -3,8 +3,8 @@ import { duelAbi } from "./abi";
 import { pub } from "./chain";
 import { config } from "./config";
 
-// public monad rpcs cap eth_getLogs at 100 blocks, so walk forward in steps
-const STEP = 100n;
+// alchemy's free tier caps eth_getLogs at 10 blocks (the public rpc at 100), so walk forward in steps
+const STEP = 10n;
 
 export type LiveDuel = { id: bigint; cardA: number; cardB: number; arena: number; block: bigint };
 
@@ -22,12 +22,12 @@ export async function watchLiveDuels(onDuel: (d: LiveDuel) => Promise<void>, fro
           if (seen.has(key)) continue;
           seen.add(key);
           const d = { id: ev.args.id, cardA: ev.args.cardA, cardB: ev.args.cardB, arena: ev.args.arena, block: ev.blockNumber };
-          onDuel(d).catch((e) => console.error(`duel ${key} failed`, e));
+          onDuel(d).catch((e) => console.error(`duel ${key} failed: ${(e as Error).message.split("\n")[0]}`));
         }
         next = to + 1n;
       }
     } catch (e) {
-      console.error("watch error", e);
+      console.error("watch error", (e as Error).message.split("\n")[0]);
     }
     await Bun.sleep(1500);
   }

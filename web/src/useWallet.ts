@@ -4,6 +4,7 @@ import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
 import { useGetWalletAccounts } from "@dynamic-labs-sdk/react-hooks";
 import { sendSponsored, smartWalletFor, type SmartWallet } from "./gas";
+import { DEV, devSigner } from "./dev";
 
 // the player plays from an alchemy smart account owned by their dynamic wallet; gas is sponsored.
 // write sends one call as a user operation and waits for it to land, throwing if it fails.
@@ -14,8 +15,22 @@ export function useWallet() {
   const [err, setErr] = useState("");
   const building = useRef<string>("");
 
+  const dev = useRef(DEV ? devSigner() : null);
+
   useEffect(() => {
-    if (!evm || building.current === evm.address) return;
+    const d = dev.current;
+    if (!d || building.current === d.owner) return;
+    building.current = d.owner;
+    smartWalletFor(d.wallet as never)
+      .then(setKernel)
+      .catch((e: Error) => {
+        building.current = "";
+        setErr(e.message);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (DEV || !evm || building.current === evm.address) return;
     building.current = evm.address;
     createWalletClientForWalletAccount({ walletAccount: evm as never })
       .then((w) => {
@@ -49,5 +64,6 @@ export function useWallet() {
     [kernel],
   );
 
-  return { address: kernel?.address, owner: evm?.address, ready: isFetched && Boolean(kernel), err, write, kernel };
+  const owner = dev.current?.owner ?? evm?.address;
+  return { address: kernel?.address, owner, ready: (DEV || isFetched) && Boolean(kernel), err, write, kernel };
 }
