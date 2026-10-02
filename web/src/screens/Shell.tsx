@@ -9,6 +9,7 @@ import { Ico } from "../ui/kit";
 import { RailIcon, type RailIconName } from "../ui/railIcons";
 import { siteHost, syncProfile, useMe } from "../profile";
 import { Onboarding } from "./Onboarding";
+import { WalletForge } from "./WalletForge";
 
 const NAV: { to: string; label: string; icon: RailIconName }[] = [
   { to: "/home", label: "Home", icon: "home" },
@@ -112,9 +113,10 @@ function TopBar() {
 }
 
 export function Shell() {
-  const { address, kernel } = useWallet();
+  const { address, kernel, owner, err } = useWallet();
   const { status } = useMe();
   const [onboarding, setOnboarding] = useState(false);
+  const [forging, setForging] = useState(true);
   // once the smart account is known, look up its profile; no profile means first login
   useEffect(() => {
     if (address) syncProfile(address);
@@ -124,7 +126,8 @@ export function Shell() {
   }, [status]);
   return (
     <div className="min-h-svh bg-app">
-      {onboarding && <Onboarding wallet={kernel} onClose={() => setOnboarding(false)} />}
+      {forging && <WalletForge owner={owner} address={address} err={err} onDone={() => setForging(false)} />}
+      {onboarding && !forging && <Onboarding wallet={kernel} onClose={() => setOnboarding(false)} />}
       <Rail />
       <div className="md:pl-[92px]">
         <div className="mx-auto max-w-[1480px] px-5 pb-24 md:px-10">

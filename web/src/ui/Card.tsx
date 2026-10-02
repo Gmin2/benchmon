@@ -7,7 +7,7 @@ import "./card.css";
 
 export type CardState = "selected" | "locked" | "used" | "winner" | "loser" | "duel" | "evolved";
 export type CardSize = "full" | "hand" | "tile" | "mini";
-export type BackSide = { side?: "mine" | "theirs"; color?: string; commit?: string; label?: string };
+export type BackSide = { side?: "mine" | "theirs"; color?: string; commit?: string; label?: string; note?: string };
 
 const STATE_TAGS: Record<CardState, [IconName | null, React.ReactNode] | null> = {
   selected: null,
@@ -191,7 +191,7 @@ function patternUrl(color: string, alpha: number) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-export function CardBack({ side = "mine", color, commit, label }: BackSide) {
+export function CardBack({ side = "mine", color, commit, label, note }: BackSide) {
   const theirs = side === "theirs";
   const main = theirs ? "#9aa3ad" : (color ?? "#cdf462");
   const tone = theirs
@@ -218,7 +218,7 @@ export function CardBack({ side = "mine", color, commit, label }: BackSide) {
           {short ? (
             <>
               <span className="lockdot" />
-              commit {short}
+              {note ?? "commit"} {short}
             </>
           ) : (
             "face down"

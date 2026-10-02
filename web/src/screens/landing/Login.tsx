@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { sendEmailOTP, signInWithSocialRedirect, verifyOTP } from "@dynamic-labs-sdk/client";
 
 type Otp = Awaited<ReturnType<typeof sendEmailOTP>>;
+
+// what the flow is doing right now, so a parent (the mon) can react to it
+export type LoginState = {
+  step: "start" | "sending" | "code" | "verifying" | "google" | "done";
+  focus: "email" | "code" | null;
+  typed: number; // characters in the email box, for the mon to follow the caret
+  error: string;
+};
 type Tone = "dark" | "light";
 
 const T = {
@@ -41,8 +49,12 @@ const GoogleMark = () => (
   </svg>
 );
 
-function CodeBoxes({ value, onChange, disabled, tone }: { value: string; onChange: (v: string) => void; disabled?: boolean; tone: Tone }) {
+function CodeBoxes({ value, onChange, disabled, tone, onFocus, onBlur, shake }: { value: string; onChange: (v: string) => void; disabled?: boolean; tone: Tone; onFocus?: () => void; onBlur?: () => void; shake?: boolean }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+  useEffect(() => {
+    refs.current[Math.min(value.length, 5)]?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
   const set = (i: number, ch: string) => {
     const digits = ch.replace(/\D/g, "");
     if (!digits) return;
@@ -50,7 +62,7 @@ function CodeBoxes({ value, onChange, disabled, tone }: { value: string; onChang
     refs.current[Math.min(5, i + digits.length)]?.focus();
   };
   return (
-    <div className="flex gap-2">
+    <div className={`flex gap-2 ${shake ? "animate-[shake_.4s_ease]" : ""}`}>
       {Array.from({ length: 6 }, (_, i) => (
         <input
           key={i}
@@ -63,6 +75,8 @@ function CodeBoxes({ value, onChange, disabled, tone }: { value: string; onChang
           disabled={disabled}
           value={value[i] ?? ""}
           onChange={(e) => set(i, e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
           onPaste={(e) => {
             e.preventDefault();
             set(0, e.clipboardData.getData("text"));
@@ -81,22 +95,44 @@ function CodeBoxes({ value, onChange, disabled, tone }: { value: string; onChang
 }
 
 // email then a 6 digit code, the whole account flow
-export function Login({ tone = "dark", cta = "Start playing", className = "" }: { tone?: Tone; cta?: string; className?: string }) {
+export function Login({ tone = "dark", cta = "Start playing", className = "", onState }: { tone?: Tone; cta?: string; className?: string; onState?: (s: LoginState) => void }) {
   const t = T[tone];
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [otp, setOtp] = useState<Otp | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [focus, setFocus] = useState<LoginState["focus"]>(null);
+  const [step, setStep] = useState<LoginState["step"]>("start");
+  const [wait, setWait] = useState(0);
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  useEffect(() => {
+    onState?.({ step, focus, typed: email.length, error: err });
+  }, [step, focus, email.length, err, onState]);
+
+  // a new code can be asked for 30s after the last one
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  const nice = (m: string) =>
+    /rate|too many|429/i.test(m) ? "too many tries, wait a minute and try again" : /invalid.*email|email.*invalid/i.test(m) ? "that email does not look right" : /network|fetch/i.test(m) ? "cannot reach the login service, check your connection" : m.split("\n")[0]!;
 
   const send = async () => {
     setBusy(true);
     setErr("");
+    setStep("sending");
     try {
       setOtp(await sendEmailOTP({ email }));
+      setCode("");
+      setWait(30);
+      setStep("code");
     } catch (e) {
-      setErr((e as Error).message);
+      setErr(nice((e as Error).message));
+      setStep(otp ? "code" : "start");
     }
     setBusy(false);
   };
@@ -104,11 +140,13 @@ export function Login({ tone = "dark", cta = "Start playing", className = "" }: 
   const google = async () => {
     setBusy(true);
     setErr("");
+    setStep("google");
     try {
       await signInWithSocialRedirect({ provider: "google", redirectUrl: `${window.location.origin}/home` });
     } catch (e) {
       const m = (e as Error).message;
-      setErr(/not supported/i.test(m) ? "google sign in is not switched on yet, use your email for now" : m.split("\n")[0]!);
+      setErr(/not supported/i.test(m) ? "google sign in is not switched on yet, use your email for now" : nice(m));
+      setStep("start");
       setBusy(false);
     }
   };
@@ -116,10 +154,14 @@ export function Login({ tone = "dark", cta = "Start playing", className = "" }: 
     if (!otp) return;
     setBusy(true);
     setErr("");
+    setStep("verifying");
     try {
       await verifyOTP({ otpVerification: otp, verificationToken: code });
+      setStep("done");
     } catch {
       setErr("that code did not work, check it or send a new one");
+      setCode("");
+      setStep("code");
       setBusy(false);
     }
   };
@@ -132,9 +174,9 @@ export function Login({ tone = "dark", cta = "Start playing", className = "" }: 
     <div id="login" className={`flex w-full max-w-[460px] flex-col gap-3 ${className}`}>
       {!otp && (
         <>
-          <button type="button" onClick={google} disabled={busy} className={`flex h-14 items-center justify-center gap-3 rounded-full text-[15px] font-bold transition disabled:opacity-50 ${t.social}`}>
+          <button type="button" onClick={google} disabled={busy} className={`flex h-14 items-center justify-center gap-3 rounded-full text-[15px] font-bold transition active:scale-[.98] disabled:opacity-50 ${t.social}`}>
             <GoogleMark />
-            Continue with Google
+            {step === "google" ? "Opening Google…" : "Continue with Google"}
           </button>
           <div className={`flex items-center gap-3 text-xs font-semibold uppercase before:h-px before:flex-1 after:h-px after:flex-1 ${t.or}`}>or use email</div>
         </>
@@ -147,31 +189,41 @@ export function Login({ tone = "dark", cta = "Start playing", className = "" }: 
             if (valid) send();
           }}
         >
-          <input type="email" autoComplete="email" placeholder="your email" aria-label="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`min-w-0 flex-1 bg-transparent pl-4 text-[15px] font-medium outline-none ${t.input}`} />
+          <input type="email" autoComplete="email" placeholder="your email" aria-label="email" value={email} onChange={(e) => setEmail(e.target.value.trim())} onFocus={() => setFocus("email")} onBlur={() => setFocus(null)} className={`min-w-0 flex-1 bg-transparent pl-4 text-[15px] font-medium outline-none ${t.input}`} />
           <button type="submit" disabled={!valid || busy} className={`h-12 shrink-0 rounded-full px-6 text-[15px] font-bold transition disabled:opacity-40 ${t.btn}`}>
-            {busy ? "Sending" : cta}
+            {step === "sending" ? "Sending…" : cta}
           </button>
         </form>
       ) : (
         <>
           <p className={`text-sm font-medium ${t.note}`}>
-            code sent to <b className={t.strong}>{email}</b>
+            we sent a 6 digit code to <b className={t.strong}>{email}</b>
           </p>
-          <CodeBoxes value={code} onChange={setCode} disabled={busy} tone={tone} />
-          <button
-            className={`w-fit text-sm font-semibold underline underline-offset-4 ${t.link}`}
-            disabled={busy}
-            onClick={() => {
-              setOtp(null);
-              setCode("");
-              setErr("");
-            }}
-          >
-            use another email
-          </button>
+          <CodeBoxes value={code} onChange={setCode} disabled={busy} tone={tone} onFocus={() => setFocus("code")} onBlur={() => setFocus(null)} shake={Boolean(err)} />
+          <div className="flex items-center justify-between text-sm">
+            <button
+              className={`font-semibold underline underline-offset-4 disabled:opacity-50 ${t.link}`}
+              disabled={busy}
+              onClick={() => {
+                setOtp(null);
+                setCode("");
+                setErr("");
+                setStep("start");
+              }}
+            >
+              use another email
+            </button>
+            <button className={`font-semibold disabled:opacity-50 ${t.note}`} disabled={busy || wait > 0} onClick={send}>
+              {step === "verifying" ? "checking…" : wait > 0 ? `send again in ${wait}s` : "send a new code"}
+            </button>
+          </div>
         </>
       )}
-      {err && <p className={`text-sm font-medium ${t.err}`}>{err}</p>}
+      {err && (
+        <p role="alert" className={`text-sm font-medium ${t.err}`}>
+          {err}
+        </p>
+      )}
     </div>
   );
 }

@@ -67,3 +67,16 @@
 @keyframes spin-slow { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) { [class*="animate-[float"], [class*="animate-[spin-slow"] { animation: none !important; } }
 @keyframes hero-in { from { opacity: 0; transform: translateY(24px) scale(.92); } }
+
+/* the mon on the login dialog and the wallet screen */
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@keyframes mon-bob { 50% { transform: translateY(2px); } }
+@keyframes mon-hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px); } 70% { transform: translateY(0); } 85% { transform: translateY(-4px); } }
+@keyframes mon-peek { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes paws-up { from { transform: translateY(8px); } to { transform: translateY(0); } }
+.mon-paws-up { animation: paws-up .22s cubic-bezier(.2, .7, .2, 1) both; }
+.mon-bob { animation: mon-bob 2.6s ease-in-out infinite; }
+.mon-hop { animation: mon-hop .7s cubic-bezier(.2, .7, .2, 1) both; }
+.mon-shake { animation: shake .4s ease both; }
+@media (prefers-reduced-motion: reduce) { .mon-bob, .mon-hop, .mon-shake, .mon-paws-up { animation: none !important; } }

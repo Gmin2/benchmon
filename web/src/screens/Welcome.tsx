@@ -3,7 +3,7 @@ import { byName } from "../mock";
 import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
 import { Pixel, ICONS } from "../ui/pixel";
-import { Login } from "./landing/Login";
+import { LoginDialog } from "./landing/LoginDialog";
 import { Wordmark } from "../ui/brand";
 import { RailIcon } from "../ui/railIcons";
 
@@ -182,19 +182,7 @@ export function Welcome() {
 
       <Grain />
 
-      {/* login dialog */}
-      {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal aria-label="log in" className="relative w-full max-w-[460px] rounded-3xl border border-white/10 bg-[#111114] p-7" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setOpen(false)} aria-label="close" className="absolute top-4 right-4 grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white">
-              ✕
-            </button>
-            <h2 className="text-2xl font-semibold tracking-tight">Start playing</h2>
-            <p className="mt-1 mb-5 text-sm text-white/55">Sign in with Google or your email. No password, no wallet setup, every move is free.</p>
-            <Login />
-          </div>
-        </div>
-      )}
+      {open && <LoginDialog onClose={() => setOpen(false)} />}
     </div>
   );
 }
