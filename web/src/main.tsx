@@ -9,6 +9,13 @@ import "./index.css";
 
 const queryClient = new QueryClient();
 
+// after a deploy an open tab can ask for a screen chunk that is gone, a reload picks up the new build
+addEventListener("vite:preloadError", () => {
+  if (sessionStorage.getItem("benchmon:reloaded")) return;
+  sessionStorage.setItem("benchmon:reloaded", "1");
+  location.reload();
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

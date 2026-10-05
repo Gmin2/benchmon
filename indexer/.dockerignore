@@ -1,0 +1,10 @@
+node_modules
+generated
+.envio
+logs
+.env
+.env.*
+*.log
+Dockerfile
+.dockerignore
+README.md

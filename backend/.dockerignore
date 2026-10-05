@@ -1,0 +1,11 @@
+node_modules
+.env
+*.env
+*.env.local
+test
+scripts
+tmp
+*.log
+Dockerfile
+.dockerignore
+README.md

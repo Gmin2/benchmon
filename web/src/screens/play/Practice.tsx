@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DECK_CAP, PLAYERS, ROSTER, byId, mockDuel, type Deck, type Player } from "../../mock";
+import { byId, deckCap, roster } from "../../hooks";
+import { PLAYERS, mockDuel, type Deck, type Player } from "../../mock";
 import { useMe } from "../../profile";
 import { roundWinner } from "../../rules";
 import { Btn } from "../../ui/kit";
@@ -12,8 +13,8 @@ const PICK_SECONDS = 30;
 // a legal random deck for the bot: five cards under the cap
 function botDeck(): number[] {
   for (let tries = 0; tries < 200; tries++) {
-    const pick = [...ROSTER].sort(() => Math.random() - 0.5).slice(0, 5);
-    if (pick.reduce((a, c) => a + infoOf(c).power, 0) <= DECK_CAP) return pick.map((c) => c.id);
+    const pick = [...roster()].sort(() => Math.random() - 0.5).slice(0, 5);
+    if (pick.reduce((a, c) => a + infoOf(c).power, 0) <= deckCap()) return pick.map((c) => c.id);
   }
   return [3, 4, 9, 13, 14];
 }

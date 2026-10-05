@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { formatEther, parseEther, type Address } from "viem";
-import { DECK_CAP, byId, type Deck } from "../mock";
+import type { Deck } from "../mock";
 import { ZERO, isMine, joinMatch, myActive, openSeats, quickMatch, type AnyWrite, type OpenSeat } from "../duel";
-import { useBalance, usePoll } from "../hooks";
+import { byId, deckCap, useBalance, useCards, usePoll } from "../hooks";
 import { useWallet } from "../useWallet";
 import { useProfiles } from "../profile";
 import { GameCard } from "../ui/Card";
@@ -67,6 +67,7 @@ function Lobby({ preset, autostart, onPractice }: { preset?: Deck; autostart: bo
   const nav = useNavigate();
   const { address, write, ready, err: walletErr } = useWallet();
   const balance = useBalance(address);
+  useCards();
   const decks = useMemo(loadDecks, []);
   const last = loadLast();
   const [deckId, setDeckId] = useState(preset?.id ?? (decks.some((d) => d.id === last?.deckId) ? last!.deckId : decks[0]!.id));
@@ -76,7 +77,7 @@ function Lobby({ preset, autostart, onPractice }: { preset?: Deck; autostart: bo
   const [err, setErr] = useState("");
   const deck = decks.find((d) => d.id === deckId) ?? preset ?? decks[0]!;
   const p = power(deck.cards);
-  const valid = deck.cards.length === 5 && p <= DECK_CAP;
+  const valid = deck.cards.length === 5 && p <= deckCap();
   const broke = ready && balance < Number(stake);
 
   const { data: seats = [] } = usePoll(() => openSeats(), 5000, []);

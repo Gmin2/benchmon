@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { keccak256, parseEventLogs, toHex, type Address, type Hex } from "viem";
 import { duelAbi } from "./abi";
-import { BACKEND, CONTRACTS, GAS, commitHash, loadPick, pub, readMatch, savePick, sendPick, type Match } from "./chain";
+import { BACKEND, CONTRACTS, GAS, commitHash, idsWhere, loadPick, pub, readMatch, readMatches, savePick, sendPick, type Match } from "./chain";
 
 export const ZERO32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const ZERO = "0x0000000000000000000000000000000000000000";
@@ -162,21 +162,16 @@ export async function joinMatch(write: AnyWrite, id: bigint, deck: number[], sta
 
 export type OpenSeat = { id: bigint; m: Match };
 
-// the newest matches still waiting for a second player, most recent first
+// matches still waiting for a second player, most recent first. the indexer says which ones, the chain confirms
 export async function openSeats(limit = 20): Promise<OpenSeat[]> {
-  const count = await pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "matchCount" });
-  const ids: bigint[] = [];
-  for (let i = count - 1n; i >= 0n && ids.length < limit; i--) ids.push(i);
-  const all = await Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
+  const all = await readMatches(await idsWhere({ state: { _eq: "open" } }, limit));
   return all.filter((x) => x.m.state === 0);
 }
 
 // my matches that are not finished, so a closed tab can get back in
 export async function myActive(me: Address, limit = 20): Promise<OpenSeat[]> {
-  const count = await pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "matchCount" });
-  const ids: bigint[] = [];
-  for (let i = count - 1n; i >= 0n && ids.length < limit; i--) ids.push(i);
-  const all = await Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
+  const who = me.toLowerCase();
+  const all = await readMatches(await idsWhere({ state: { _in: ["open", "playing"] }, _or: [{ a: { _eq: who } }, { b: { _eq: who } }] }, limit));
   return all.filter((x) => x.m.state !== 2 && isMine(x.m, me));
 }
 
@@ -200,7 +195,7 @@ export async function lockCard(write: AnyWrite, id: bigint, round: number, me: A
   const salt = keccak256(toHex(crypto.getRandomValues(new Uint8Array(32))));
   savePick(id, round, me, card, salt);
   await duel(write, "commit", [id, commitHash(id, round, me, card, salt)], GAS.commit);
-  sendPick(id, round, me, card, salt).catch((e: Error) => console.log(`bm: ${e.message}`));
+  sendPick(id, round, me, card, salt).catch((e: Error) => import.meta.env.DEV && console.log(`bm: ${e.message}`));
 }
 
 // our own reveal, a backup for when the backend relay is down
@@ -219,28 +214,6 @@ export const cancelMatch = (write: AnyWrite, id: bigint) => duel(write, "cancel"
 export const withdraw = (write: AnyWrite) => duel(write, "withdraw", [], GAS.withdraw);
 
 export type { AnyWrite };
-
-// every match an address played among the recent ones, newest first, with its record
-export async function matchesOf(who: string, scan = 80) {
-  const count = await pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "matchCount" });
-  const ids: bigint[] = [];
-  for (let i = count - 1n; i >= 0n && ids.length < scan; i--) ids.push(i);
-  const all = await Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
-  const mine = all.filter((x) => isMine(x.m, who) && x.m.b !== ZERO);
-  const side = (m: Match) => (m.a.toLowerCase() === who.toLowerCase() ? 1 : 2);
-  const done = mine.filter((x) => x.m.state === 2);
-  const wins = done.filter((x) => x.m.result === side(x.m)).length;
-  const draws = done.filter((x) => x.m.result === 3).length;
-  // net: stakes won minus stakes lost
-  const net = done.reduce((a, x) => (x.m.result === side(x.m) ? a + x.m.stake : x.m.result === 3 ? a : a - x.m.stake), 0n);
-  // wins in a row counting back from the newest finished match, a draw ends it
-  let streak = 0;
-  for (const x of done) {
-    if (x.m.result !== side(x.m)) break;
-    streak++;
-  }
-  return { matches: mine, wins, losses: done.length - wins - draws, draws, net, streak, side };
-}
 
 export const RANKS = [
   { name: "rookie", at: 0 },

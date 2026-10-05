@@ -1,6 +1,6 @@
 import { formatEther, type Address } from "viem";
 import { backingAbi, duelAbi, matchMarketAbi } from "./abi";
-import { CONTRACTS, pub, recentMatches, type Match } from "./chain";
+import { CONTRACTS, idsWhere, pub, readMatches, type Match } from "./chain";
 
 export type MarketRow = {
   id: bigint;
@@ -19,8 +19,11 @@ export type MarketRow = {
 
 const wad = (x: bigint) => Number(formatEther(x));
 
-export async function loadMarkets(limit = 12): Promise<MarketRow[]> {
-  const list = await recentMatches(limit);
+// the newest matches, optionally only those in some indexer states
+export const recentIds = (limit = 12, states?: string[]) => idsWhere(states ? { state: { _in: states } } : {}, limit);
+
+export async function loadMarkets(ids: bigint[]): Promise<MarketRow[]> {
+  const list = await readMatches(ids);
   const reads = await Promise.all(
     list.map(async ({ id, m }) => {
       const [mk, p, betting, poolA, poolB] = await Promise.all([

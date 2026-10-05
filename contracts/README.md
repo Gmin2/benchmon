@@ -81,3 +81,16 @@ the owner named the 15 cards with neutral stats (all 50) and set the deck cap to
 | MatchMarket | `0x52CE235DCF1Afa5d4AF427BE9Df039c7797Fa35B` |
 
 after a decisive round the loser gets three arenas (`ArenaOffered`) and picks one with `pickArena` within 60s; after that anyone can call `skipPick` and one of the three is drawn. a drawn round still gets a random arena. the duel set of sept 28 is retired.
+
+### roles (oct 5 2026)
+
+the deployer still owns CardStats, Duel, Backing and StatsFeed. the hot roles moved to their own keys so the backend never holds the owner key:
+
+| role | address | set by |
+|---|---|---|
+| Duel judge (posts live duel verdicts) | `0x0058A57fa1B4643ED12d06b1DbF53b796965E571` | `Duel.setJudge` |
+| relayer (sends `revealFor`, anyone may) | `0xC0A0301Ee6C056c3404Da35dd844e507553C3308` | backend only |
+| house, MatchMarket owner (seeds and settles markets) | `0x6DB0914C07bEf0C36a7B3A5D3aF4Cd70928780c0` | `MatchMarket.transferOwnership` |
+| stats keeper, StatsFeed forwarder | `0xE5e1Fb025EDe49fc00797b9a52cF0A9d2AeC54bA` | `StatsFeed.setForwarder` |
+
+StatsFeed used to trust chainlink's MockKeystoneForwarder, which checks no signatures, so anyone could push a report that rewrote card stats (reproduced on a fork). it now only takes reports from the stats keeper; `backend/scripts/push-stats.ts` sends them. a real cre deployment would point it at the production forwarder again.
