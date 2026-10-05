@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { clearSocialRedirectParams, completeSocialRedirect, detectSocialRedirectUrl } from "@dynamic-labs-sdk/client";
 import { useInitStatus, useUser } from "@dynamic-labs-sdk/react-hooks";
 import { DEV } from "./dev";
@@ -15,6 +15,10 @@ const Shell = lazy(() => import("./screens/Shell").then((m) => ({ default: m.She
 const Trade = lazy(() => import("./screens/Trade").then((m) => ({ default: m.Trade })));
 const Welcome = lazy(() => import("./screens/Welcome").then((m) => ({ default: m.Welcome })));
 
+// google sends people back to /home?<oauth params>. a logged out /home redirects to / before App's effect runs and
+// would drop those params, so read the url once here, before any routing happens
+const landingUrl = new URL(window.location.href);
+
 const splash = (
   <div className="grid h-full place-items-center">
     <Logo className="h-12 w-12 animate-pulse" />
@@ -27,19 +31,23 @@ export default function App() {
   const authed = DEV || Boolean(user);
 
   // coming back from google: finish the sign in, then drop the oauth params from the url
+  const [social, setSocial] = useState<"checking" | "done">(DEV ? "done" : "checking");
   useEffect(() => {
-    if (DEV || init !== "finished") return;
-    const url = new URL(window.location.href);
+    if (DEV) return;
+    if (init === "failed") return setSocial("done");
+    if (init !== "finished") return;
     (async () => {
-      if (!(await detectSocialRedirectUrl({ url }))) return;
-      await completeSocialRedirect({ url });
+      if (!(await detectSocialRedirectUrl({ url: landingUrl }))) return;
+      await completeSocialRedirect({ url: landingUrl });
       clearSocialRedirectParams();
-    })().catch((e) => console.error("google sign in", e));
+    })()
+      .catch((e) => console.error("google sign in", e))
+      .finally(() => setSocial("done"));
   }, [init]);
 
   // if dynamic cant start, still show the site logged out instead of hanging on the splash
   const down = !DEV && init === "failed";
-  if (!DEV && init !== "finished" && !down) return splash;
+  if (!DEV && ((init !== "finished" && !down) || social === "checking")) return splash;
 
   return (
     <Suspense fallback={splash}>
