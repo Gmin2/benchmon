@@ -32,6 +32,12 @@ export const config = {
   // HOUSE=0 runs the backend without seeding markets, otherwise HOUSE may hold the house address as a check
   houseOn: env("HOUSE") !== "0",
   houseSeed: env("HOUSE_SEED") ?? "0.01",
+  // the house bot takes a seat nobody filled after BOT_JOIN_AFTER seconds; off without BOT_KEY or with BOT=0
+  botKey: key("BOT_KEY"),
+  botOn: Boolean(env("BOT_KEY")) && env("BOT") !== "0",
+  botJoinAfter: Number(env("BOT_JOIN_AFTER") ?? 15),
+  botMaxStake: env("BOT_MAX_STAKE") ?? "0.05",
+  botMaxActive: Number(env("BOT_MAX_ACTIVE") ?? 5),
   // only shown in /health, the keeper key is used by scripts/push-stats.ts and never by the server
   statsKeeper: env("STATS_KEEPER"),
   // fighters go through openrouter; kimi is the judge through moonshot directly (kimi bounty), or openrouter without a moonshot key
@@ -69,6 +75,15 @@ export function checkServerConfig() {
   role("JUDGE", config.judgeKey, env("JUDGE"));
   role("RELAYER", config.relayerKey, env("RELAYER"));
   if (config.houseOn) role("HOUSE", config.houseKey, env("HOUSE"));
+  if (config.botOn) role("BOT", config.botKey, env("BOT"));
+  if (config.botOn) {
+    try {
+      parseAmount(config.botMaxStake);
+    } catch {
+      bad.push(`BOT_MAX_STAKE is not an amount: ${config.botMaxStake}`);
+    }
+    if (!(config.botJoinAfter >= 0) || !Number.isInteger(config.botMaxActive) || config.botMaxActive < 1) bad.push("BOT_JOIN_AFTER and BOT_MAX_ACTIVE must be positive numbers");
+  }
   if (!config.openrouterKey) bad.push("OPENROUTER_API_KEY is missing, live duels cannot run without it");
   for (const [k, v] of Object.entries(config.contracts)) if (!isAddress(v)) bad.push(`contract ${k} is not an address: ${v}`);
   if (!Number.isInteger(config.port) || config.port <= 0) bad.push(`PORT is not a port: ${env("PORT")}`);

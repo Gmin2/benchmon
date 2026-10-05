@@ -8,7 +8,7 @@ import { readJson, saver } from "./store";
 export type Profile = { address: string; username: string; cls: string; body: "male" | "female"; createdAt: number };
 
 const CLASSES = ["researcher", "hacker", "trader", "builder", "sage", "athlete", "scout", "validator"];
-const RESERVED = new Set(["home", "play", "trade", "ranks", "decks", "admin", "api", "benchmon", "support", "help", "settings", "profile", "login", "logout", "kimi", "judge", "house", "null", "undefined"]);
+const RESERVED = new Set(["home", "play", "trade", "ranks", "decks", "admin", "api", "benchmon", "support", "help", "settings", "profile", "login", "logout", "kimi", "judge", "house", "null", "undefined", "housebot"]);
 const byAddress = new Map<string, Profile>();
 const byName = new Map<string, Profile>();
 
@@ -29,8 +29,14 @@ export function checkName(name: string, forAddress?: string): string | null {
   return null;
 }
 
-export const profileOf = (address: string) => byAddress.get(address.toLowerCase()) ?? null;
-export const profileByName = (name: string) => byName.get(name.toLowerCase()) ?? null;
+// profiles the server owns, like the house bot. they answer lookups but are never saved or claimable
+const builtin = new Map<string, Profile>();
+export function addBuiltin(p: Profile) {
+  builtin.set(p.address.toLowerCase(), { ...p, address: p.address.toLowerCase() });
+}
+
+export const profileOf = (address: string) => builtin.get(address.toLowerCase()) ?? byAddress.get(address.toLowerCase()) ?? null;
+export const profileByName = (name: string) => [...builtin.values()].find((p) => p.username === name.toLowerCase()) ?? byName.get(name.toLowerCase()) ?? null;
 
 // the exact text the player signs, the web builds the same string
 export const claimMessage = (p: { address: string; username: string; cls: string; body: string; issuedAt: number }) =>
