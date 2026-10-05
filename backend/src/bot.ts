@@ -11,6 +11,8 @@ import type { Stats } from "./rules";
 import { boundedSet, errMsg, loop } from "./util";
 
 const ZERO = "0x0000000000000000000000000000000000000000000000000000000000000000";
+// what the bot needs on top of the stake to play a whole match: join ~0.047 MON at 102 gwei, plus commits and a pick
+export const MATCH_GAS = parseAmount("0.1");
 const NOBODY = "0x0000000000000000000000000000000000000000";
 const firstSeen = new Map<string, number>();
 const done = boundedSet(5000);
@@ -125,7 +127,7 @@ async function tick() {
       firstSeen.set(key, seen);
       if (Date.now() - seen < config.botJoinAfter * 1000 || m.stake > maxStake || active >= config.botMaxActive) continue;
       const balance = await pub.getBalance({ address: me });
-      if (balance < m.stake + parseAmount("0.02")) {
+      if (balance < m.stake + MATCH_GAS) {
         console.log(`bot skips match ${id}: balance ${formatEther(balance)} MON is too low for the stake`);
         continue;
       }

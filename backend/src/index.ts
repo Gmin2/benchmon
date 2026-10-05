@@ -5,7 +5,7 @@ import { duelAbi, matchMarketAbi } from "./abi";
 import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
 import { houseLoop } from "./house";
-import { botLoop } from "./bot";
+import { MATCH_GAS, botLoop } from "./bot";
 import { liveGuard } from "./guard";
 import { rateLimiter } from "./ratelimit";
 import { addBuiltin, checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
@@ -63,6 +63,7 @@ async function readBody(req: Request): Promise<unknown> {
 }
 
 // chain reads for /health are cached so a busy health checker cannot burn the rpc quota
+let botBalance: { at: number; wei: bigint } | undefined;
 let healthCache: { at: number; status: number; body: unknown } | undefined;
 async function health() {
   const ttl = healthCache?.status === 200 ? 10_000 : 3_000;
@@ -198,7 +199,14 @@ async function route(req: Request, url: URL, h: Record<string, string>): Promise
   }
   // what the web needs to tell a player the house bot is coming
   if (url.pathname === "/bot") {
-    return json(config.botOn ? { on: true, address: signer("bot").address, joinAfter: config.botJoinAfter, maxStake: config.botMaxStake } : { on: false });
+    if (!config.botOn) return json({ on: false });
+    // ready: the bot can pay a max stake match right now, so the web only promises a bot that will come
+    if (!botBalance || Date.now() - botBalance.at > 30_000) botBalance = { at: Date.now(), wei: await pub.getBalance({ address: signer("bot").address }) };
+    // the biggest stake the bot can cover right now, gas for the whole match included
+    const max = parseAmount(config.botMaxStake);
+    const spare = botBalance.wei > MATCH_GAS ? botBalance.wei - MATCH_GAS : 0n;
+    const canStake = spare < max ? spare : max;
+    return json({ on: true, address: signer("bot").address, joinAfter: config.botJoinAfter, maxStake: config.botMaxStake, canStake: formatEther(canStake) });
   }
   if (url.pathname === "/health") {
     const r = await health();

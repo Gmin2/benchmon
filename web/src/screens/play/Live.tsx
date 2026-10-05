@@ -27,7 +27,7 @@ function useNow() {
 function Waiting({ id, stake, mine, onCancel, onJoin, busy }: { id: bigint; stake: bigint; mine: boolean; onCancel: () => void; onJoin: () => void; busy: string }) {
   const { me } = useMe();
   const bot = useBot();
-  const botComes = bot?.on && stake <= parseEther(bot.maxStake);
+  const botComes = bot?.on && stake > 0n && stake <= parseEther(bot.canStake);
   return (
     <section className="relative grid min-h-[520px] place-items-center overflow-hidden rounded-[var(--radius-panel)] bg-panel">
       <img src="/art/arenas/code@1x.png" alt="" className="pixel absolute inset-0 h-full w-full object-cover opacity-20" />
@@ -50,7 +50,7 @@ function Waiting({ id, stake, mine, onCancel, onJoin, busy }: { id: bigint; stak
           {mine && bot?.on && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-panel-2 px-4 py-2 text-sm text-mute">
               <span className={`h-2 w-2 rounded-full ${botComes ? "animate-pulse bg-neon" : "bg-dim"}`} />
-              {botComes ? `Nobody yet? The house bot takes this seat in about ${bot.joinAfter}s.` : `Stakes above ${bot.maxStake} MON wait for a human player.`}
+              {botComes ? `Nobody yet? The house bot takes this seat in about ${bot.joinAfter}s.` : stake > parseEther(bot.maxStake) ? `Stakes above ${bot.maxStake} MON wait for a human player.` : "The house bot is out of MON right now, so this seat waits for a human player."}
             </div>
           )}
         </div>

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { BACKEND } from "./chain";
 
 // the house bot settings from the backend, so the waiting screen never promises a bot that is off
-export type BotInfo = { on: false } | { on: true; address: string; joinAfter: number; maxStake: string };
+// canStake: the biggest stake the bot can pay for right now, gas for the whole match included
+export type BotInfo = { on: false } | { on: true; address: string; joinAfter: number; maxStake: string; canStake: string };
 
 let cached: Promise<BotInfo> | null = null;
 const load = () =>
