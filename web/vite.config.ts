@@ -25,22 +25,9 @@ export default defineConfig(({ command, mode }) => {
     envPrefix: ["VITE_", "DYNAMIC_ENV_ID"],
     define: site ? { "import.meta.env.VITE_SITE_URL": JSON.stringify(site) } : {},
     build: {
-      // the dynamic sdk chunk is vendor code over the default limit, the app chunks stay small
-      chunkSizeWarningLimit: 800,
-      rolldownOptions: {
-        output: {
-          // the wallet sdks are big and change rarely, so they get their own long cached chunks
-          codeSplitting: {
-            includeDependenciesRecursively: false,
-            groups: [
-              { name: "dynamic", test: /node_modules[\\/]@dynamic-labs/, priority: 30 },
-              { name: "alchemy", test: /node_modules[\\/]@(alchemy|account-kit|aa-sdk)/, priority: 30 },
-              { name: "viem", test: /node_modules[\\/](viem|ox|abitype|@noble|@scure)[\\/]/, priority: 20 },
-              { name: "react", test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|@tanstack)[\\/]/, priority: 20 },
-            ],
-          },
-        },
-      },
+      // the wallet sdks are vendor code over the default limit, the app chunks stay small. no manual vendor
+      // groups: splitting the alchemy sdk away from its deps made it run before them and crash every logged in screen
+      chunkSizeWarningLimit: 1500,
     },
   };
 });
