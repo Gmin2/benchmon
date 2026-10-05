@@ -1,6 +1,6 @@
 import { keccak256, toHex } from "viem";
 import { duelAbi } from "./abi";
-import { pub, signer } from "./chain";
+import { fitGas, pub, signer } from "./chain";
 import { config } from "./config";
 
 export type Verdict = { outcome: 0 | 1 | 2; transcript: string };
@@ -11,15 +11,8 @@ export async function settle(id: bigint, v: Verdict) {
   if (!m.awaitingVerdict) return { skipped: true as const };
   const duelHash = keccak256(toHex(v.transcript));
   const judge = signer("judge");
-  const r = await judge.send((nonce) =>
-    judge.wallet.writeContract({
-      address: config.contracts.duel,
-      abi: duelAbi,
-      functionName: "settleLive",
-      args: [id, v.outcome, duelHash],
-      gas: 300_000n,
-      nonce,
-    }),
-  );
+  const call = { address: config.contracts.duel, abi: duelAbi, functionName: "settleLive", args: [id, v.outcome, duelHash] } as const;
+  const gas = await fitGas(judge.address, call);
+  const r = await judge.send((nonce) => judge.wallet.writeContract({ ...call, gas, nonce }));
   return { skipped: false as const, tx: r.hash, status: r.status, duelHash };
 }

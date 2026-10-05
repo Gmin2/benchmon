@@ -3,7 +3,7 @@
 // before the commit lands and revealed even across a restart.
 import { encodeAbiParameters, formatEther, keccak256, toHex, type Address, type Hex } from "viem";
 import { cardStatsAbi, duelAbi } from "./abi";
-import { pub, signer } from "./chain";
+import { fitGas, pub, signer } from "./chain";
 import { config, parseAmount } from "./config";
 import { addPick } from "./relay";
 import { botArena, botCard, botDeck, idsOf, type CardStat } from "./botplay";
@@ -35,18 +35,18 @@ async function allCards(): Promise<{ cards: CardStat[]; v: bigint }> {
   return { cards: await statsAt([...Array(Number(n)).keys()], v), v };
 }
 
-const send = (functionName: string, args: readonly unknown[], extra: { value?: bigint; gas?: bigint } = {}) => {
+const send = async (functionName: string, args: readonly unknown[], extra: { value?: bigint } = {}) => {
   const bot = signer("bot");
-  return bot.send((nonce) =>
-    bot.wallet.writeContract({ address: config.contracts.duel, abi: duelAbi, functionName: functionName as never, args: args as never, nonce, gas: extra.gas ?? 300_000n, ...(extra.value ? { value: extra.value } : {}) }),
-  );
+  const call = { address: config.contracts.duel, abi: duelAbi, functionName, args, ...(extra.value ? { value: extra.value } : {}) };
+  const gas = await fitGas(bot.address, call);
+  return bot.send((nonce) => bot.wallet.writeContract({ ...call, functionName: functionName as never, args: args as never, gas, nonce }));
 };
 
 async function join(id: bigint, m: M) {
   const cap = Number(await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "deckCap" }));
   const { cards } = await allCards();
   const deck = botDeck(cards, cap);
-  const r = await send("join", [id, deck], { value: m.stake, gas: 400_000n });
+  const r = await send("join", [id, deck], { value: m.stake });
   console.log(`bot joined match ${id} for ${formatEther(m.stake)} MON with ${deck.join(",")}: ${r.status} ${r.hash}`);
 }
 
