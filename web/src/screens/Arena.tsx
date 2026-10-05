@@ -38,7 +38,7 @@ function Answer({ slot, round, reveal, call, spotPick }: { slot: Slot; round: Ro
   const lost = reveal && reveal.winner !== slot && reveal.winner !== "draw";
   const model = shown?.model ?? side.model;
   return (
-    <div className={`flex min-h-[150px] flex-col rounded-2xl border p-4 transition ${won ? "border-neon/70 bg-neon/[.06] shadow-[0_0_0_1px_rgba(184,255,61,.25)]" : lost ? "border-line opacity-80" : "border-line bg-panel-2/40"}`}>
+    <div className={`flex min-h-[150px] min-w-0 flex-col rounded-2xl border p-4 transition ${won ? "border-neon/70 bg-neon/[.06] shadow-[0_0_0_1px_rgba(184,255,61,.25)]" : lost ? "border-line opacity-80" : "border-line bg-panel-2/40"}`}>
       <div className="mb-3 flex items-center justify-between gap-2">
         {model ? (
           <ModelBadge m={model} />
