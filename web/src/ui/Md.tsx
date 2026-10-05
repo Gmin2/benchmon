@@ -30,10 +30,10 @@ function inline(text: string, key: string): ReactNode[] {
 export function Md({ text, className = "" }: { text: string; className?: string }) {
   const parts = text.split(/```[a-zA-Z0-9]*\n?/);
   return (
-    <div className={`space-y-2 break-words ${className}`}>
+    <div className={`min-w-0 max-w-full space-y-2 break-words ${className}`}>
       {parts.map((p, i) =>
         i % 2 === 1 ? (
-          <pre key={i} className="overflow-x-auto rounded-xl bg-black/35 p-3 font-mono text-[13px] leading-5 whitespace-pre">
+          <pre key={i} className="max-w-full overflow-x-auto rounded-xl bg-black/35 p-3 font-mono text-[13px] leading-5 whitespace-pre">
             {p.replace(/\n$/, "")}
           </pre>
         ) : (
