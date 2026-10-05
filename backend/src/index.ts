@@ -5,9 +5,10 @@ import { duelAbi, matchMarketAbi } from "./abi";
 import { watchLiveDuels, type LiveDuel } from "./watcher";
 import { judgeLiveDuel } from "./live";
 import { houseLoop } from "./house";
+import { botLoop } from "./bot";
 import { liveGuard } from "./guard";
 import { rateLimiter } from "./ratelimit";
-import { checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
+import { addBuiltin, checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 import { flushWrites, readJson, saver } from "./store";
 import { createArena, type Verdict } from "./arena";
@@ -67,7 +68,7 @@ async function health() {
   const ttl = healthCache?.status === 200 ? 10_000 : 3_000;
   if (healthCache && Date.now() - healthCache.at < ttl) return healthCache;
   try {
-    const roles = [signer("judge"), signer("relayer"), ...(config.houseOn ? [signer("house")] : [])];
+    const roles = [signer("judge"), signer("relayer"), ...(config.houseOn ? [signer("house")] : []), ...(config.botOn ? [signer("bot")] : [])];
     const watched: { role: string; address: Address }[] = roles.map((s) => ({ role: s.role, address: s.address }));
     if (config.statsKeeper && isAddress(config.statsKeeper)) watched.push({ role: "statsKeeper", address: config.statsKeeper });
     const [block, matches, onchainJudge, marketOwner, ...balances] = await Promise.all([
@@ -195,6 +196,10 @@ async function route(req: Request, url: URL, h: Record<string, string>): Promise
       return "error" in r ? json(r, 400) : json(r);
     }
   }
+  // what the web needs to tell a player the house bot is coming
+  if (url.pathname === "/bot") {
+    return json(config.botOn ? { on: true, address: signer("bot").address, joinAfter: config.botJoinAfter, maxStake: config.botMaxStake } : { on: false });
+  }
   if (url.pathname === "/health") {
     const r = await health();
     return json(r.body, r.status);
@@ -205,6 +210,7 @@ async function route(req: Request, url: URL, h: Record<string, string>): Promise
 // loaded before the server takes requests, a write before the load would wipe the file
 await loadPicks();
 await loadProfiles();
+if (config.botOn) addBuiltin({ address: signer("bot").address, username: "housebot", cls: "validator", body: "male", createdAt: 0 });
 
 const server = Bun.serve({
   port: config.port,
@@ -228,7 +234,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`backend on :${server.port}, judge ${signer("judge").address}, relayer ${signer("relayer").address}${config.houseOn ? `, house ${signer("house").address}` : ", house off"}, data in ${config.duelsDir}`);
+console.log(`backend on :${server.port}, judge ${signer("judge").address}, relayer ${signer("relayer").address}${config.houseOn ? `, house ${signer("house").address}` : ", house off"}${config.botOn ? `, bot ${signer("bot").address}` : ", bot off"}, data in ${config.duelsDir}`);
 
 // live duels below the min stake, or for a player past the daily cap, get no model calls. Duel then lets
 // anyone settle the round by stats once VERDICT_TIMEOUT has passed
@@ -299,3 +305,4 @@ watchLiveDuels(handle);
 loop("catch up", catchUp, 60_000);
 relayLoop();
 if (config.houseOn) houseLoop();
+if (config.botOn) botLoop();

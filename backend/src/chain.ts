@@ -8,11 +8,13 @@ export const monadTestnet = defineChain({
   name: "Monad Testnet",
   nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
   rpcUrls: { default: { http: [config.rpcUrl] } },
+  // the standard deployment, used by pub.multicall to read many cards in one call
+  contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
 });
 
 export const pub = createPublicClient({ chain: monadTestnet, transport: http(config.rpcUrl) });
 
-export type Role = "judge" | "relayer" | "house";
+export type Role = "judge" | "relayer" | "house" | "bot";
 
 // one wallet and one tx queue per role, made on first use so read only scripts need no keys
 function makeSigner(role: Role, key: Hex | undefined) {
@@ -29,7 +31,7 @@ function makeSigner(role: Role, key: Hex | undefined) {
 export type Signer = ReturnType<typeof makeSigner>;
 
 const signers = new Map<Role, Signer>();
-const keys: Record<Role, () => Hex | undefined> = { judge: () => config.judgeKey, relayer: () => config.relayerKey, house: () => config.houseKey };
+const keys: Record<Role, () => Hex | undefined> = { judge: () => config.judgeKey, relayer: () => config.relayerKey, house: () => config.houseKey, bot: () => config.botKey };
 
 export function signer(role: Role): Signer {
   let s = signers.get(role);

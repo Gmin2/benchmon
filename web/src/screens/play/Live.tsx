@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { formatEther, type Address } from "viem";
+import { formatEther, parseEther, type Address } from "viem";
 import { loadPick } from "../../chain";
 import { ZERO, ZERO32, cancelMatch, claimTimeout, joinMatch, loadTranscript, lockCard, offerOf, pickArena, pickerOf, revealMine, settleByStats, skipPick, useMatch, withdraw, type AnyWrite, type Transcript } from "../../duel";
+import { useBot } from "../../botInfo";
 import { useMe, useProfiles } from "../../profile";
 import { useCards } from "../../hooks";
 import { useWallet } from "../../useWallet";
@@ -25,6 +26,8 @@ function useNow() {
 
 function Waiting({ id, stake, mine, onCancel, onJoin, busy }: { id: bigint; stake: bigint; mine: boolean; onCancel: () => void; onJoin: () => void; busy: string }) {
   const { me } = useMe();
+  const bot = useBot();
+  const botComes = bot?.on && stake <= parseEther(bot.maxStake);
   return (
     <section className="relative grid min-h-[520px] place-items-center overflow-hidden rounded-[var(--radius-panel)] bg-panel">
       <img src="/art/arenas/code@1x.png" alt="" className="pixel absolute inset-0 h-full w-full object-cover opacity-20" />
@@ -44,6 +47,12 @@ function Waiting({ id, stake, mine, onCancel, onJoin, busy }: { id: bigint; stak
           <div className="mt-1 text-mute">
             match #{id.toString()} · {formatEther(stake)} MON each · winner takes {formatEther(stake * 2n)} MON
           </div>
+          {mine && bot?.on && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-panel-2 px-4 py-2 text-sm text-mute">
+              <span className={`h-2 w-2 rounded-full ${botComes ? "animate-pulse bg-neon" : "bg-dim"}`} />
+              {botComes ? `Nobody yet? The house bot takes this seat in about ${bot.joinAfter}s.` : `Stakes above ${bot.maxStake} MON wait for a human player.`}
+            </div>
+          )}
         </div>
         {mine ? (
           <Btn kind="ghost" onClick={onCancel} disabled={Boolean(busy)}>
