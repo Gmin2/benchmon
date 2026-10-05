@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { mkdir, rename, unlink } from "node:fs/promises";
 import { dirname } from "node:path";
 
@@ -5,12 +6,18 @@ import { dirname } from "node:path";
 // renamed over the old one. readers never see half a file. only one backend instance may write here.
 async function put(path: string, text: string) {
   await mkdir(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+  // a random part so two writes in the same millisecond never share a tmp file
+  const tmp = `${path}.${process.pid}.${Date.now()}.${randomBytes(4).toString("hex")}.tmp`;
   await Bun.write(tmp, text);
   try {
     await rename(tmp, path);
-  } catch {
-    // some smb mounts refuse to rename over an existing file
+  } catch (e) {
+    // some smb mounts refuse to rename over an existing file; only then drop the old one first
+    const code = (e as { code?: string }).code;
+    if (code !== "EEXIST" && code !== "EPERM" && code !== "EACCES") {
+      await unlink(tmp).catch(() => {});
+      throw e;
+    }
     await unlink(path).catch(() => {});
     await rename(tmp, path);
   }

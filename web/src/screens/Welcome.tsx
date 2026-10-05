@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { byName, useCards } from "../hooks";
 import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
@@ -83,6 +84,7 @@ type Floater = { x: string; y: string; r: number; d: number; el: React.ReactNode
 
 export function Welcome() {
   const [open, setOpen] = useState(false);
+  const go = useNavigate();
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     addEventListener("keydown", k);
@@ -130,7 +132,7 @@ export function Welcome() {
       <header className="relative z-30 mx-auto flex max-w-[1180px] items-center justify-between px-6 py-5">
         <Wordmark className="h-14 md:h-[68px]" />
         <div className="flex gap-2">
-          <button onClick={() => setOpen(true)} className="hidden h-12 rounded-full border-2 border-neon/70 px-6 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10 sm:block">
+          <button onClick={() => go("/arena")} className="hidden h-12 rounded-full border-2 border-neon/70 px-6 text-sm font-extrabold tracking-wide text-neon uppercase transition hover:bg-neon/10 sm:block">
             Try for free
           </button>
           <button onClick={() => setOpen(true)} className="h-12 rounded-full bg-neon px-6 text-sm font-extrabold tracking-wide text-bg uppercase transition hover:bg-neon-hi">
@@ -153,7 +155,7 @@ export function Welcome() {
         </h1>
         <p className="mt-5 text-[16px] font-medium text-white/65 md:text-[18px]">Every card is a real AI model. Build a deck, stake on it and battle for the pot.</p>
         <div className="pointer-events-auto mt-8 flex gap-3">
-          <button onClick={() => setOpen(true)} className="flex h-14 items-center gap-2 rounded-full bg-neon px-8 text-[15px] font-extrabold tracking-wide text-bg uppercase shadow-[0_12px_40px_-10px_rgba(184,255,61,.7)] transition hover:bg-neon-hi active:scale-[.98]">
+          <button onClick={() => go("/arena")} className="flex h-14 items-center gap-2 rounded-full bg-neon px-8 text-[15px] font-extrabold tracking-wide text-bg uppercase shadow-[0_12px_40px_-10px_rgba(184,255,61,.7)] transition hover:bg-neon-hi active:scale-[.98]">
             <RailIcon name="play" className="h-6 w-6" cutColor="#b8ff3d" />
             Play for free
           </button>

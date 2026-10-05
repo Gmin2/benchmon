@@ -13,6 +13,7 @@ import { WalletForge } from "./WalletForge";
 
 const NAV: { to: string; label: string; icon: RailIconName }[] = [
   { to: "/home", label: "Home", icon: "home" },
+  { to: "/arena", label: "Arena", icon: "arena" },
   { to: "/decks", label: "Decks", icon: "decks" },
   { to: "/play", label: "Play", icon: "play" },
   { to: "/watch", label: "Watch", icon: "watch" },
