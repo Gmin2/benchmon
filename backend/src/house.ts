@@ -1,6 +1,6 @@
 import { formatEther } from "viem";
 import { duelAbi, matchMarketAbi } from "./abi";
-import { pub, signer } from "./chain";
+import { fitGas, pub, signer } from "./chain";
 import { config, parseAmount } from "./config";
 import { boundedSet, errMsg, loop } from "./util";
 
@@ -23,17 +23,17 @@ async function tend(id: bigint, seed: bigint) {
   if (mb === 0n) {
     if (!open) return done.add(key);
     const b = (seed * 10n ** 18n) / LN2;
-    const r = await house.send((nonce) =>
-      house.wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "open", args: [id, b], value: seed, gas: 150_000n, nonce }),
-    );
+    const call = { address: config.contracts.market, abi: matchMarketAbi, functionName: "open", args: [id, b], value: seed } as const;
+    const gas = await fitGas(house.address, call);
+    const r = await house.send((nonce) => house.wallet.writeContract({ ...call, gas, nonce }));
     console.log(`market opened for match ${id}, seed ${formatEther(seed)} MON: ${r.status} ${r.hash}`);
     return;
   }
   if (settled) return done.add(key);
   if (result === 0) return;
-  const r = await house.send((nonce) =>
-    house.wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "houseSettle", args: [id], gas: 120_000n, nonce }),
-  );
+  const call = { address: config.contracts.market, abi: matchMarketAbi, functionName: "houseSettle", args: [id] } as const;
+  const gas = await fitGas(house.address, call);
+  const r = await house.send((nonce) => house.wallet.writeContract({ ...call, gas, nonce }));
   console.log(`house settled match ${id}: ${r.status} ${r.hash}`);
   done.add(key);
 }

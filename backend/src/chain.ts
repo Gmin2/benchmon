@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, defineChain, http, type Hex } from "viem";
+import { createPublicClient, createWalletClient, defineChain, http, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "./config";
 import { txQueue } from "./txq";
@@ -40,3 +40,10 @@ export function signer(role: Role): Signer {
 }
 
 export const activeSigners = () => [...signers.values()];
+
+// monad charges the whole gas limit, not the gas used, so every send asks for what the call needs plus a
+// small margin. a call that would revert fails here, before anything is paid
+export async function fitGas(account: Address, c: { address: Address; abi: Abi; functionName: string; args?: readonly unknown[]; value?: bigint }) {
+  const g = await pub.estimateContractGas({ ...c, account } as never);
+  return g + g / 5n + 5_000n;
+}

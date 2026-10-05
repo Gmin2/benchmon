@@ -6,7 +6,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import { duelAbi } from "../src/abi";
 
 const rpc = process.env.RPC_URL!;
-if (!/127\.0\.0\.1|localhost/.test(rpc)) throw new Error("this script only runs against a local fork");
+const local = /127\.0\.0\.1|localhost/.test(rpc);
+// a real chain only with ALLOW_TESTNET=1: then nothing is warped, the real judge and the real bot play it out
+if (!local && !process.env.ALLOW_TESTNET) throw new Error("this script only runs against a local fork unless ALLOW_TESTNET=1");
 const DUEL = "0xC110B9Ee0845Ed76D722Ccec3111302D56d1cA61" as const;
 const chain = defineChain({ id: 10143, name: "fork", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });
 const pub = createPublicClient({ chain, transport: http(rpc) });
@@ -49,6 +51,7 @@ for (;;) {
   const m = await pub.readContract({ address: DUEL, abi: duelAbi, functionName: "getMatch", args: [id] });
   if (m.state === 0) {
     if (Date.now() - t0 > 90_000) throw new Error("the bot never joined");
+    if (!local && (Date.now() - t0) % 10_000 < 1000) log("still open, waiting for the house bot");
     await sleep(1000);
     continue;
   }
@@ -58,7 +61,7 @@ for (;;) {
     break;
   }
   if (m.awaitingVerdict) {
-    if (!warped) {
+    if (!warped && local) {
       // the judge is off in this test: jump past the verdict deadline so the bot settles the live round by stats
       log("live round, no judge here: warping time past the verdict deadline");
       await pub.request({ method: "evm_increaseTime" as never, params: [700] as never });
@@ -87,7 +90,7 @@ for (;;) {
     used.add(card);
     log(`human committed round ${m.round + 1} (arena ${m.arena})`);
   } else if (m.round === stallRound) {
-    if (!warped) {
+    if (!warped && local) {
       log(`human walks away in round ${m.round + 1}: warping past the move deadline`);
       await pub.request({ method: "evm_increaseTime" as never, params: [200] as never });
       await pub.request({ method: "evm_mine" as never, params: [] as never });

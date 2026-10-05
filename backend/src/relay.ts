@@ -1,6 +1,6 @@
 import { encodeAbiParameters, isAddress, keccak256, type Address, type Hex } from "viem";
 import { duelAbi } from "./abi";
-import { pub, signer } from "./chain";
+import { fitGas, pub, signer } from "./chain";
 import { config, file } from "./config";
 import { readJson, saver } from "./store";
 import { errMsg, loop } from "./util";
@@ -77,16 +77,9 @@ async function relayOne(k: string, p: Pick) {
   if (m.awaitingVerdict || m.commitA === ZERO || m.commitB === ZERO) return;
   if ((isA ? m.commitA : m.commitB) !== commitHash(p)) return drop(k);
   const relayer = signer("relayer");
-  const r = await relayer.send((nonce) =>
-    relayer.wallet.writeContract({
-      address: config.contracts.duel,
-      abi: duelAbi,
-      functionName: "revealFor",
-      args: [p.id, p.player, p.card, p.salt],
-      gas: 350_000n,
-      nonce,
-    }),
-  );
+  const call = { address: config.contracts.duel, abi: duelAbi, functionName: "revealFor", args: [p.id, p.player, p.card, p.salt] } as const;
+  const gas = await fitGas(relayer.address, call);
+  const r = await relayer.send((nonce) => relayer.wallet.writeContract({ ...call, gas, nonce }));
   console.log(`revealed for ${p.player.slice(0, 8)} match ${p.id} round ${p.round}: ${r.status} ${r.hash}`);
   await drop(k);
 }
