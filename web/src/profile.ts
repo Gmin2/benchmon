@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { BACKEND } from "./chain";
 import type { SmartWallet } from "./gas";
-import { ME, type ClassId, type Player } from "./mock";
+import type { ClassId, Rank } from "./mock";
 
 // usernames live on the backend, keyed by the player's smart account, so everyone sees the same name and look
 export type Profile = { address: string; username: string; cls: ClassId; body: "male" | "female"; createdAt: number };
 type Status = "idle" | "loading" | "none" | "ready" | "offline";
 
-export const SITE = (import.meta.env.VITE_SITE_URL as string | undefined) ?? location.origin;
+export const SITE = (import.meta.env.VITE_SITE_URL || location.origin).replace(/\/$/, "");
 export const siteHost = SITE.replace(/^https?:\/\//, "");
 export const profileUrl = (username: string) => `${SITE}/@${username}`;
 
@@ -44,7 +44,11 @@ export async function syncProfile(address: string) {
   }
 }
 
-export function useMe(): { me: Player; profile: Profile | null; status: Status } {
+// how the signed in player shows up: their profile once it exists, a plain look until then. no stats here,
+// those come from the indexer
+export type Me = { handle: string; address: string; cls: ClassId; body: "male" | "female"; rank: Rank };
+
+export function useMe(): { me: Me; profile: Profile | null; status: Status } {
   const [s, setS] = useState(state);
   useEffect(() => {
     const on = () => setS(state);
@@ -52,7 +56,8 @@ export function useMe(): { me: Player; profile: Profile | null; status: Status }
     return () => removeEventListener(EVENT, on);
   }, []);
   const p = s.profile;
-  return { me: p ? { ...ME, handle: p.username, cls: p.cls, body: p.body, address: p.address } : ME, profile: p, status: s.status };
+  const me: Me = p ? { handle: p.username, cls: p.cls, body: p.body, address: p.address, rank: "rookie" } : { handle: "you", address: s.address ?? "", cls: "researcher", body: "male", rank: "rookie" };
+  return { me, profile: p, status: s.status };
 }
 
 export async function checkUsername(name: string, address?: string): Promise<{ free: boolean; reason: string | null }> {

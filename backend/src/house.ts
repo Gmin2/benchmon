@@ -1,18 +1,19 @@
-import { formatEther, parseEther } from "viem";
+import { formatEther } from "viem";
 import { duelAbi, matchMarketAbi } from "./abi";
-import { pub, wallet } from "./chain";
-import { config } from "./config";
+import { pub, signer } from "./chain";
+import { config, parseAmount } from "./config";
+import { boundedSet, errMsg, loop } from "./util";
 
 // the house opens a market on every new match so spectators can trade it, and takes back what is left
 // once the match is over. the seed is the most the house can lose on one match (b * ln 2).
 const LN2 = 693147180559945310n;
-const seed = parseEther(process.env.HOUSE_SEED ?? "0.01");
-const b = (seed * 10n ** 18n) / LN2;
 
-const done = new Set<string>();
+const done = boundedSet(5000);
+const fails = new Map<string, number>();
 
-async function tend(id: bigint) {
+async function tend(id: bigint, seed: bigint) {
   const key = id.toString();
+  const house = signer("house");
   const [mk, open, result] = await Promise.all([
     pub.readContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "markets", args: [id] }),
     pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "bettingOpen", args: [id] }),
@@ -21,31 +22,56 @@ async function tend(id: bigint) {
   const [mb, , , , , settled] = mk;
   if (mb === 0n) {
     if (!open) return done.add(key);
-    const hash = await wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "open", args: [id, b], value: seed, gas: 150_000n });
-    const r = await pub.waitForTransactionReceipt({ hash });
-    console.log(`market opened for match ${id}, seed ${formatEther(seed)} MON: ${r.status} ${hash}`);
+    const b = (seed * 10n ** 18n) / LN2;
+    const r = await house.send((nonce) =>
+      house.wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "open", args: [id, b], value: seed, gas: 150_000n, nonce }),
+    );
+    console.log(`market opened for match ${id}, seed ${formatEther(seed)} MON: ${r.status} ${r.hash}`);
     return;
   }
   if (settled) return done.add(key);
   if (result === 0) return;
-  const hash = await wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "houseSettle", args: [id], gas: 120_000n });
-  const r = await pub.waitForTransactionReceipt({ hash });
-  console.log(`house settled match ${id}: ${r.status} ${hash}`);
+  const r = await house.send((nonce) =>
+    house.wallet.writeContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "houseSettle", args: [id], gas: 120_000n, nonce }),
+  );
+  console.log(`house settled match ${id}: ${r.status} ${r.hash}`);
   done.add(key);
 }
 
 // walks the recent matches every few seconds; a match drops out once its market is settled, or it closed without one
-export async function houseLoop(scan = 30n) {
-  for (;;) {
-    try {
+export function houseLoop(scan = 30n) {
+  const seed = parseAmount(config.houseSeed);
+  return loop(
+    "house",
+    async () => {
       const count = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "matchCount" });
+      let tried = 0;
+      const failed: [string, string][] = [];
       for (let id = count > scan ? count - scan : 0n; id < count; id++) {
-        if (done.has(id.toString())) continue;
-        await tend(id).catch((e) => console.error(`house ${id}: ${(e as Error).message.split("\n")[0]}`));
+        const key = id.toString();
+        if (done.has(key)) continue;
+        tried++;
+        try {
+          await tend(id, seed);
+          fails.delete(key);
+        } catch (e) {
+          failed.push([key, errMsg(e)]);
+        }
       }
-    } catch (e) {
-      console.error(`house loop: ${(e as Error).message.split("\n")[0]}`);
-    }
-    await Bun.sleep(2000);
-  }
+      if (!failed.length) return;
+      const last = `match ${failed.at(-1)![0]}: ${failed.at(-1)![1]}`;
+      // everything failing is the rpc or the house wallet, not one match: back off without counting it against them
+      if (failed.length === tried) throw new Error(`${failed.length} failed, last ${last}`);
+      console.error(`house: ${failed.length} of ${tried} failed, last ${last}`);
+      for (const [key, msg] of failed) {
+        const n = (fails.get(key) ?? 0) + 1;
+        fails.set(key, n);
+        if (n < 5) continue;
+        console.error(`house gave up on match ${key} after ${n} tries: ${msg}`);
+        fails.delete(key);
+        done.add(key);
+      }
+    },
+    2000,
+  );
 }

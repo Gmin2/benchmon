@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatEther } from "viem";
-import { matchesOf, rankOf } from "../duel";
-import { usePoll } from "../hooks";
+import { rankOf } from "../duel";
+import { ixEmpty, recordOf, usePlayer, usePlayerMatches } from "../indexer";
 import { profileByName, profileUrl, siteHost, useMe, useProfiles, type Profile } from "../profile";
 import { Wordmark } from "../ui/brand";
 import { CLASSES } from "../ui/generated";
-import { Btn, Chip, Panel } from "../ui/kit";
+import { Btn, Chip, Empty, Panel } from "../ui/kit";
 import { faceOf } from "./play/parts";
 
 // a player's public page at /@username, open to anyone with the link
@@ -23,8 +23,13 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
     else setP(null);
   }, [name]);
 
-  const { data: rec } = usePoll(async () => (p ? matchesOf(p.address) : null), 15000, [p?.address]);
-  const others = rec ? rec.matches.map((x) => (rec.side(x.m) === 1 ? x.m.b : x.m.a)) : [];
+  // the record comes from the indexer, one query instead of reading the newest matches off the chain
+  const addr = p?.address.toLowerCase();
+  const player = usePlayer(addr);
+  const hist = usePlayerMatches(addr);
+  const played = (hist.data ?? []).filter((m) => m.b);
+  const rec = addr && hist.data ? recordOf(hist.data, addr) : null;
+  const others = played.map((m) => (m.a === addr ? m.b! : m.a));
   const nameOf = useProfiles(others);
 
   const body =
@@ -41,8 +46,8 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
     ) : (
       (() => {
         const cls = CLASSES.find((c) => c.cls === p.cls);
-        const wins = rec?.wins ?? 0;
-        const played = rec ? rec.wins + rec.losses + rec.draws : 0;
+        const stats = player.status === "ok" ? (player.data ?? { matches: 0, wins: 0, losses: 0 }) : null;
+        const wins = stats?.wins ?? 0;
         const rank = rankOf(wins);
         const isMe = mine?.address === p.address;
         const copy = () =>
@@ -89,11 +94,11 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               {[
-                [String(played), "matches"],
-                [String(wins), "wins"],
-                [String(rec?.losses ?? 0), "losses"],
-                [played ? `${Math.round((wins / played) * 100)}%` : "—", "win rate"],
-                [rec ? `${rec.net < 0n ? "" : "+"}${Number(formatEther(rec.net)).toFixed(2)}` : "0.00", "net MON"],
+                [stats ? String(stats.matches) : "—", "matches"],
+                [stats ? String(wins) : "—", "wins"],
+                [stats ? String(stats.losses) : "—", "losses"],
+                [stats?.matches ? `${Math.round((wins / stats.matches) * 100)}%` : "—", "win rate"],
+                [rec ? `${rec.net < 0 ? "" : "+"}${rec.net.toFixed(2)}` : "—", "net MON"],
               ].map(([v, l]) => (
                 <Panel key={l} className="p-5 text-center">
                   <div className="text-3xl font-extrabold">{v}</div>
@@ -104,21 +109,21 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
 
             <Panel className="p-6">
               <h2 className="text-xl font-bold">Recent matches</h2>
-              {!rec ? (
-                <p className="mt-3 text-mute">reading the chain…</p>
-              ) : rec.matches.length === 0 ? (
-                <p className="mt-3 text-mute">no matches yet.</p>
+              {hist.status !== "ok" ? (
+                <Empty className="mt-4" {...ixEmpty(hist.status, "Match history")} />
+              ) : played.length === 0 ? (
+                <Empty className="mt-4" title="No matches yet" body="matches show up here once they start." />
               ) : (
                 <div className="mt-4 flex flex-col gap-2">
-                  {rec.matches.slice(0, 12).map(({ id, m }) => {
-                    const side = rec.side(m);
-                    const opp = side === 1 ? m.b : m.a;
+                  {played.slice(0, 12).map((m) => {
+                    const side = m.a === addr ? "a" : "b";
+                    const opp = side === "a" ? m.b! : m.a;
                     const op = nameOf(opp);
-                    const res = m.state !== 2 ? "live" : m.result === 3 ? "draw" : m.result === side ? "win" : "loss";
+                    const res = m.state !== "done" ? "live" : m.result === "draw" ? "draw" : m.result === side ? "win" : "loss";
                     return (
-                      <div key={id.toString()} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-panel-2 px-4 py-3">
+                      <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-panel-2 px-4 py-3">
                         <span className="flex items-center gap-3">
-                          <span className="text-sm text-dim">#{id.toString()}</span>
+                          <span className="text-sm text-dim">#{m.id}</span>
                           <span>
                             vs{" "}
                             {op ? (
@@ -132,7 +137,7 @@ export function ProfilePage({ standalone = false }: { standalone?: boolean }) {
                         </span>
                         <span className="flex items-center gap-3 text-sm">
                           <span className="text-mute">
-                            {side === 1 ? m.winsA : m.winsB} : {side === 1 ? m.winsB : m.winsA} · {formatEther(m.stake)} MON
+                            {side === "a" ? m.winsA : m.winsB} : {side === "a" ? m.winsB : m.winsA} · {formatEther(BigInt(m.stake))} MON
                           </span>
                           <Chip tone={res === "win" ? "up" : res === "loss" ? "down" : res === "live" ? "violet" : "flat"}>{res}</Chip>
                         </span>

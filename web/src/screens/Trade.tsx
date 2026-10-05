@@ -3,12 +3,12 @@ import { useSearchParams } from "react-router-dom";
 import { formatEther, parseEther } from "viem";
 import { backingAbi, matchMarketAbi } from "../abi";
 import { CONTRACTS, type Card } from "../chain";
-import { deckOf, short, useBalance, useCards, usePoll } from "../hooks";
-import { backedOf, cents, loadHistory, loadMarkets, mon, poolPayout, priceAfter, pushSample, quote, redeemableOf, sharesFor, sharesOf, type MarketRow, type Sample } from "../market";
+import { deckOf, roster, short, useBalance, useCards, usePoll } from "../hooks";
+import { backedOf, cents, loadHistory, loadMarkets, recentIds, mon, poolPayout, priceAfter, pushSample, quote, redeemableOf, sharesFor, sharesOf, type MarketRow, type Sample } from "../market";
 import { useProfiles } from "../profile";
 import { useWallet } from "../useWallet";
 import { AreaChart } from "../ui/chart";
-import { Btn, Chip, Ico, Panel, Seg } from "../ui/kit";
+import { Btn, Chip, Empty, Ico, Panel, Seg } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
 import { MatchStage } from "./MatchStage";
 
@@ -51,12 +51,20 @@ function TokenBadge({ children }: { children: React.ReactNode }) {
 }
 
 export function Trade() {
-  const cards = useCards();
+  const live = useCards();
+  const cards = live.length ? live : roster();
   const { address, write, ready } = useWallet();
   const balance = useBalance(address);
-  const { data: markets = [], err } = usePoll(() => loadMarkets(12), 4000, []);
   const [params] = useSearchParams();
   const [pick, setPick] = useState<bigint | null>(() => (/^\d+$/.test(params.get("m") ?? "") ? BigInt(params.get("m")!) : null));
+  // the list refreshes slowly, the match on screen quickly. the indexer picks the ids, the chain has the market
+  const { data: listed, err } = usePoll(async () => loadMarkets(await recentIds(12)), 10000, []);
+  const { data: sel } = usePoll(async () => (pick === null ? [] : loadMarkets([pick])), 3000, [pick]);
+  const fresh = sel?.[0]?.id === pick ? sel?.[0] : undefined;
+  const markets = useMemo(() => {
+    const rows = (listed ?? []).map((x) => (fresh && x.id === fresh.id ? fresh : x));
+    return fresh && !rows.some((x) => x.id === fresh.id) ? [fresh, ...rows] : rows;
+  }, [listed, fresh]);
   // backing a side is the simple bet, so it is what people see first
   const [mode, setMode] = useState<"buy" | "sell" | "pool">("pool");
   const [side, setSide] = useState<1 | 2>(1);
@@ -208,6 +216,8 @@ export function Trade() {
 
         {m ? (
           <MatchStage id={m.id} match={m.match} cards={cards} />
+        ) : listed && !err ? (
+          <Empty className="h-[420px]" title="No matches yet" body="once a match is opened from Play it shows up here, and you can back a side before the first reveal." />
         ) : (
           <Panel className="grid h-[420px] place-items-center text-mute">{err ? `retrying: ${err}` : "loading matches"}</Panel>
         )}
@@ -241,6 +251,7 @@ export function Trade() {
           <Panel className="p-5">
             <h2 className="text-lg font-bold">Matches</h2>
             <div className="mt-3 flex max-h-[290px] flex-col gap-1.5 overflow-y-auto">
+              {listed && !markets.length && <p className="px-3 py-2.5 text-sm text-mute">no matches yet.</p>}
               {markets.map((x) => {
                 const s = status(x);
                 const on = x.id === m?.id;

@@ -1,5 +1,6 @@
 import { createPublicClient, encodeAbiParameters, http, keccak256, type Address, type Hex } from "viem";
 import { cardStatsAbi, duelAbi } from "./abi";
+import { INDEXER, matchIds } from "./indexer";
 import type { Stats } from "./rules";
 
 // alchemy first: the public monad rpc caps a client at 15 requests a second
@@ -42,12 +43,28 @@ export async function loadCards(): Promise<Card[]> {
 export const readMatch = (id: bigint) => pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
 export type Match = Awaited<ReturnType<typeof readMatch>>;
 
-export async function recentMatches(limit = 8) {
+// the newest match ids straight from the contract, the fallback when there is no indexer
+export async function newestIds(limit: number) {
   const count = await pub.readContract({ address: CONTRACTS.duel, abi: duelAbi, functionName: "matchCount" });
-  const ids = [];
+  const ids: bigint[] = [];
   for (let i = count - 1n; i >= 0n && ids.length < limit; i--) ids.push(i);
-  return Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
+  return ids;
 }
+
+// ids from the indexer when it answers, else a scan of the newest ones. the caller reads and filters the
+// matches themselves, so a lagging indexer never shows a stale state
+export async function idsWhere(where: Record<string, unknown>, limit: number) {
+  if (INDEXER) {
+    try {
+      return await matchIds(where, limit);
+    } catch {
+      // fall through to the chain
+    }
+  }
+  return newestIds(limit);
+}
+
+export const readMatches = (ids: bigint[]) => Promise.all(ids.map(async (id) => ({ id, m: await readMatch(id) })));
 
 export function commitHash(id: bigint, round: number, player: Address, card: number, salt: Hex): Hex {
   return keccak256(
@@ -68,8 +85,9 @@ export function loadPick(id: bigint, round: number, player: Address): { card: nu
   return v ? JSON.parse(v) : null;
 }
 
-// the backend: reveals, live duels, profiles. set VITE_BACKEND_URL once it is hosted
-export const BACKEND = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "http://localhost:8788";
+// the backend: reveals, live duels, profiles. localhost only in the dev server, vite.config.ts fails a
+// production build without VITE_BACKEND_URL
+export const BACKEND = (import.meta.env.VITE_BACKEND_URL || (import.meta.env.DEV ? "http://localhost:8788" : "")).replace(/\/$/, "");
 
 // hand the pick to the backend so it can reveal even if this tab is closed or in the background
 export async function sendPick(id: bigint, round: number, player: Address, card: number, salt: Hex) {

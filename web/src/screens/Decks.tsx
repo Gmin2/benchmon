@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { byId, deckCap, roster, useCards } from "../hooks";
 import { useNavigate } from "react-router-dom";
-import { DECK_CAP, ROSTER, STARTER_DECKS, byId, type Deck } from "../mock";
+import { STARTER_DECKS, type Deck } from "../mock";
 import { GameCard } from "../ui/Card";
 import { MARKS } from "../ui/generated";
 import { Btn, Chip, Ico, Panel, SearchBar, Seg } from "../ui/kit";
@@ -27,6 +28,7 @@ function storeDecks(d: Deck[]) {
 export { loadDecks };
 
 function PowerMeter({ value }: { value: number }) {
+  const DECK_CAP = deckCap();
   const over = value > DECK_CAP;
   const pct = Math.min(1, value / DECK_CAP);
   return (
@@ -86,7 +88,8 @@ export function Decks() {
   const [sort, setSort] = useState<(typeof SORTS)[number]>("power");
   const [q, setQ] = useState("");
   const deck = decks.find((d) => d.id === active) ?? decks[0]!;
-  const infos = useMemo(() => ROSTER.map(infoOf), []);
+  const cards = useCards();
+  const infos = useMemo(() => roster().map(infoOf), [cards]);
 
   const list = infos
     .filter((i) => type === "all" || i.type === type)
@@ -95,7 +98,7 @@ export function Decks() {
 
   const chosen = deck.cards.map((id) => infoOf(byId(id)));
   const total = chosen.reduce((a, c) => a + c.power, 0);
-  const valid = deck.cards.length === 5 && total <= DECK_CAP;
+  const valid = deck.cards.length === 5 && total <= deckCap();
 
   const update = (cards: number[]) => {
     const next = decks.map((d) => (d.id === deck.id ? { ...d, cards } : d));
@@ -137,7 +140,7 @@ export function Decks() {
         <div className="mt-6 grid grid-cols-[repeat(auto-fill,minmax(198px,1fr))] justify-items-center gap-x-4 gap-y-7">
           {list.map((i) => {
             const inDeck = deck.cards.includes(i.card.id);
-            const wouldOver = !inDeck && total + i.power > DECK_CAP;
+            const wouldOver = !inDeck && total + i.power > deckCap();
             const full = !inDeck && deck.cards.length >= 5;
             return (
               <GameCard

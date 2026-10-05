@@ -26,6 +26,8 @@ export function chatModel(o: ChatOpts): Model {
       const res = await fetch(`${o.baseUrl}/chat/completions`, {
         method: "POST",
         headers: { authorization: `Bearer ${o.apiKey}`, "content-type": "application/json" },
+        // a hung provider must not hold the duel past the verdict timeout
+        signal: AbortSignal.timeout(120_000),
         body: JSON.stringify({
           model: o.model,
           temperature: 0,

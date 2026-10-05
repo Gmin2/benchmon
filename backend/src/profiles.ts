@@ -1,7 +1,7 @@
-import { mkdir } from "node:fs/promises";
 import { isAddress, type Address, type Hex } from "viem";
 import { pub } from "./chain";
-import { config } from "./config";
+import { file } from "./config";
+import { readJson, saver } from "./store";
 
 // usernames, class and look per player address. a claim is signed by the player's smart account, so nobody
 // can take a name for someone else's wallet. kept in a json file next to the duel transcripts.
@@ -9,23 +9,17 @@ export type Profile = { address: string; username: string; cls: string; body: "m
 
 const CLASSES = ["researcher", "hacker", "trader", "builder", "sage", "athlete", "scout", "validator"];
 const RESERVED = new Set(["home", "play", "trade", "ranks", "decks", "admin", "api", "benchmon", "support", "help", "settings", "profile", "login", "logout", "kimi", "judge", "house", "null", "undefined"]);
-const file = `${config.duelsDir}../profiles.json`;
 const byAddress = new Map<string, Profile>();
 const byName = new Map<string, Profile>();
 
 export async function loadProfiles() {
-  const f = Bun.file(file);
-  if (!(await f.exists())) return;
-  for (const p of (await f.json()) as Profile[]) {
+  for (const p of (await readJson<Profile[]>(file("profiles.json"))) ?? []) {
     byAddress.set(p.address, p);
     byName.set(p.username, p);
   }
 }
 
-async function persist() {
-  await mkdir(config.duelsDir, { recursive: true });
-  await Bun.write(file, JSON.stringify([...byAddress.values()], null, 1));
-}
+const persist = saver(file("profiles.json"), () => JSON.stringify([...byAddress.values()], null, 1));
 
 export function checkName(name: string, forAddress?: string): string | null {
   if (!/^[a-z0-9_]{3,18}$/.test(name)) return "3 to 18 letters, numbers or _";

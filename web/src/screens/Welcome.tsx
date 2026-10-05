@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { byName } from "../mock";
+import { byName, useCards } from "../hooks";
 import { CardBack, GameCard } from "../ui/Card";
 import { artOf, infoOf } from "../ui/meta";
 import { Pixel, ICONS } from "../ui/pixel";
@@ -89,6 +89,7 @@ export function Welcome() {
     return () => removeEventListener("keydown", k);
   }, []);
 
+  useCards();
   const heroes = ["kimi-k3", "claude-opus-5.5", "deepseek-v4.1-flash"].map((n) => infoOf(byName(n)));
   const [h, setH] = useState(0);
   useEffect(() => {

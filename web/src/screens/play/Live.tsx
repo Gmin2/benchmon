@@ -4,6 +4,7 @@ import { formatEther, type Address } from "viem";
 import { loadPick } from "../../chain";
 import { ZERO, ZERO32, cancelMatch, claimTimeout, joinMatch, loadTranscript, lockCard, offerOf, pickArena, pickerOf, revealMine, settleByStats, skipPick, useMatch, withdraw, type AnyWrite, type Transcript } from "../../duel";
 import { useMe, useProfiles } from "../../profile";
+import { useCards } from "../../hooks";
 import { useWallet } from "../../useWallet";
 import { Btn, Ico, Panel } from "../../ui/kit";
 import { loadDecks } from "../Decks";
@@ -61,6 +62,7 @@ function Waiting({ id, stake, mine, onCancel, onJoin, busy }: { id: bigint; stak
 export function Live({ id }: { id: bigint }) {
   const nav = useNavigate();
   const { me } = useMe();
+  useCards();
   const { address, write, ready } = useWallet();
   const w = write as unknown as AnyWrite;
   const { m, rounds, owed } = useMatch(id, address);

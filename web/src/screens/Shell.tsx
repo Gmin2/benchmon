@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { logout } from "@dynamic-labs-sdk/client";
 import { useWallet } from "../useWallet";
@@ -132,7 +132,10 @@ export function Shell() {
       <div className="md:pl-[92px]">
         <div className="mx-auto max-w-[1480px] px-5 pb-24 md:px-10">
           <TopBar />
-          <Outlet />
+          {/* the chrome stays up while a screen chunk loads */}
+          <Suspense fallback={null}>
+            <Outlet />
+          </Suspense>
         </div>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-line bg-app/95 py-2 backdrop-blur md:hidden">

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { byId, type Player } from "../../mock";
+import { byId } from "../../hooks";
+import type { Player } from "../../mock";
 import { ARENAS } from "../../rules";
 import { GameCard, type CardState } from "../../ui/Card";
 import { CLASSES } from "../../ui/generated";

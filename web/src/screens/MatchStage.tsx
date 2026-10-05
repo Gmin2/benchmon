@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatEther } from "viem";
 import { BACKEND, type Card, type Match } from "../chain";
 import { loadRounds, trackRounds, type RoundLog } from "../duel";
-import { deckOf, short } from "../hooks";
+import { deckOf, roster, short } from "../hooks";
 import { ARENAS } from "../rules";
 import { CardBack, GameCard } from "../ui/Card";
 import { Chip, Ico } from "../ui/kit";
@@ -101,7 +101,9 @@ function PlaceholderBack({ side, commit }: { side: "a" | "b"; commit: string }) 
   return <CardBack side={side === "a" ? "mine" : "theirs"} commit={commit} label={side === "a" ? "side a" : "side b"} />;
 }
 
-export function MatchStage({ id, match: m, cards }: { id: bigint; match: Match; cards: Card[] }) {
+export function MatchStage({ id, match: m, cards: live }: { id: bigint; match: Match; cards: Card[] }) {
+  // the bundled roster stands in until the chain stats load
+  const cards = live.length ? live : roster();
   const arena = ARENAS[m.arena] ?? "code";
   const deckA = deckOf(m.deckA, cards);
   const deckB = deckOf(m.deckB, cards);

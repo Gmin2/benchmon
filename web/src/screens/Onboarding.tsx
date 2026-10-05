@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { SmartWallet } from "../gas";
-import { STARTER_DECKS, byId, type ClassId } from "../mock";
+import { STARTER_DECKS, type ClassId } from "../mock";
+import { byId } from "../hooks";
 import { checkUsername, claimProfile, profileUrl, siteHost, type Profile } from "../profile";
 import { GameCard } from "../ui/Card";
 import { CLASSES } from "../ui/generated";

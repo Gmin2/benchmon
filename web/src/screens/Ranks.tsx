@@ -1,40 +1,54 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMe } from "../profile";
-import { CARD_RECORDS, PLAYERS, avatarOf, byName, type Player } from "../mock";
+import { RANKS, rankOf } from "../duel";
+import { byId, useCards } from "../hooks";
+import { ixEmpty, ixNote, mon, useCardRecords, usePlayer, useTopPlayers, type IxCard, type IxPlayer } from "../indexer";
+import { avatarOf } from "../mock";
+import { useMe, useProfiles } from "../profile";
+import { useWallet } from "../useWallet";
 import { MARKS } from "../ui/generated";
-import { Btn, Chip, Ico, Panel, Seg } from "../ui/kit";
+import { Btn, Chip, Empty, Ico, Panel } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
 import { LabMark } from "../ui/pixel";
+import { faceOf, type Face } from "./play/parts";
 
 const VIEWS = ["Players", "Cards"] as const;
-const PERIODS = ["season", "week", "today"] as const;
 
-const rate = (p: Player) => p.wins / Math.max(1, p.wins + p.losses);
+const rate = (p: Pick<IxPlayer, "wins" | "losses">) => p.wins / Math.max(1, p.wins + p.losses);
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-function Podium({ players }: { players: Player[] }) {
-  const order = [players[1], players[0], players[2]].filter((p): p is Player => Boolean(p));
+type Row = { p: IxPlayer; face: Face; username?: string };
+
+function useRows(players: IxPlayer[]): Row[] {
+  const profileOf = useProfiles(players.map((p) => p.id));
+  return players.map((p) => {
+    const pr = profileOf(p.id);
+    return { p, face: { ...faceOf(p.id, pr), rank: rankOf(p.wins) }, username: pr?.username };
+  });
+}
+
+function Podium({ rows }: { rows: Row[] }) {
+  const order = [rows[1], rows[0], rows[2]].filter((r): r is Row => Boolean(r));
   const height = ["h-[150px]", "h-[200px]", "h-[120px]"];
-  const place = [2, 1, 3];
+  const place = rows.length === 1 ? [1] : rows.length === 2 ? [2, 1] : [2, 1, 3];
   return (
     <section className="relative overflow-hidden rounded-[var(--radius-panel)] bg-panel px-6 pt-8">
       <img src="/art/arenas/honesty@1x.png" alt="" className="pixel absolute inset-0 h-full w-full object-cover opacity-25" />
       <div className="absolute inset-0 bg-gradient-to-b from-panel/40 to-panel" />
       <div className="relative flex items-end justify-center gap-4 md:gap-8">
-        {order.map((p, i) => (
-          <div key={p.handle} className="flex w-[180px] flex-col items-center">
+        {order.map(({ p, face }, i) => (
+          <div key={p.id} className="flex w-[180px] flex-col items-center">
             <div className="relative">
-              <img src={avatarOf(p, false)} alt="" className={`pixel object-contain ${place[i] === 1 ? "h-44 w-44" : "h-36 w-36"}`} />
-              {place[i] === 1 && <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-neon px-3 py-1 text-xs font-bold text-bg">season leader</span>}
+              <img src={avatarOf(face, false)} alt="" className={`pixel object-contain ${place[i] === 1 ? "h-44 w-44" : "h-36 w-36"}`} />
+              {place[i] === 1 && <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-neon px-3 py-1 text-xs font-bold text-bg">leader</span>}
             </div>
-            <div className="mt-2 text-lg font-bold">{p.handle}</div>
+            <div className="mt-2 max-w-full truncate text-lg font-bold">{face.handle}</div>
             <div className="text-sm text-mute capitalize">
-              {p.cls} · {p.wins} wins
+              {face.cls} · {p.wins} wins
             </div>
-            <div className={`mt-3 flex w-full flex-col items-center justify-start rounded-t-3xl pt-4 ${height[i]} ${place[i] === 1 ? "bg-neon text-bg" : "bg-panel-2"}`}>
+            <div className={`mt-3 flex w-full flex-col items-center justify-start rounded-t-3xl pt-4 ${height[[2, 1, 3].indexOf(place[i]!)]} ${place[i] === 1 ? "bg-neon text-bg" : "bg-panel-2"}`}>
               <span className="font-display text-5xl">{place[i]}</span>
-              <span className={`mt-1 text-sm font-semibold ${place[i] === 1 ? "text-bg/70" : "text-neon"}`}>{p.winnings.toFixed(2)} MON</span>
+              <span className={`mt-1 text-sm font-semibold ${place[i] === 1 ? "text-bg/70" : "text-neon"}`}>{mon(p.won).toFixed(2)} MON</span>
             </div>
           </div>
         ))}
@@ -43,24 +57,29 @@ function Podium({ players }: { players: Player[] }) {
   );
 }
 
-function PlayersTable() {
+function PlayersTable({ rows }: { rows: Row[] }) {
+  const nav = useNavigate();
   return (
-    <Panel className="p-6">
-      <div className="grid grid-cols-[48px_minmax(200px,2fr)_repeat(4,minmax(0,1fr))] gap-y-1 text-[15px]">
-        {["#", "Player", "Wins", "Win rate", "Streak", "Winnings"].map((h) => (
+    <Panel className="overflow-x-auto p-6">
+      <div className="grid min-w-[640px] grid-cols-[48px_minmax(200px,2fr)_repeat(4,minmax(0,1fr))] gap-y-1 text-[15px]">
+        {["#", "Player", "Wins", "Win rate", "Matches", "Winnings"].map((h) => (
           <div key={h} className="pb-3 text-mute">
             {h}
           </div>
         ))}
-        {PLAYERS.map((p, i) => (
-          <div key={p.handle} className="col-span-6 grid grid-cols-subgrid items-center rounded-2xl py-2.5 transition hover:bg-panel-2">
+        {rows.map(({ p, face, username }, i) => (
+          <div
+            key={p.id}
+            onClick={username ? () => nav(`/@${username}`) : undefined}
+            className={`col-span-6 grid grid-cols-subgrid items-center rounded-2xl py-2.5 transition hover:bg-panel-2 ${username ? "cursor-pointer" : ""}`}
+          >
             <span className={`pl-3 font-bold ${i < 3 ? "text-neon" : "text-mute"}`}>{i + 1}</span>
-            <span className="flex items-center gap-3">
-              <img src={avatarOf(p)} alt="" className="pixel h-11 w-11 rounded-xl bg-panel-2 object-cover" />
+            <span className="flex min-w-0 items-center gap-3">
+              <img src={avatarOf(face)} alt="" className="pixel h-11 w-11 rounded-xl bg-panel-2 object-cover" />
               <span className="min-w-0">
-                <span className="block truncate font-semibold">{p.handle}</span>
+                <span className="block truncate font-semibold">{face.handle}</span>
                 <span className="block text-xs text-mute capitalize">
-                  {p.cls} · {p.rank}
+                  {face.cls} · {face.rank}
                 </span>
               </span>
             </span>
@@ -69,8 +88,8 @@ function PlayersTable() {
               <span className="text-dim"> / {p.losses}</span>
             </span>
             <span>{pct(rate(p))}</span>
-            <span>{p.streak > 0 ? <Chip tone="up">{p.streak} in a row</Chip> : <span className="text-dim">—</span>}</span>
-            <span className="font-semibold text-neon">{p.winnings.toFixed(2)} MON</span>
+            <span>{p.matches}</span>
+            <span className="font-semibold text-neon">{mon(p.won).toFixed(2)} MON</span>
           </div>
         ))}
       </div>
@@ -78,23 +97,27 @@ function PlayersTable() {
   );
 }
 
-function CardsTable() {
+function CardsTable({ records }: { records: IxCard[] }) {
+  useCards();
+  // win rate is rounds won over plays, cards nobody played yet sit at the bottom
+  const rows = records
+    .map((r) => ({ r, info: infoOf(byId(Number(r.id))), wr: r.plays ? r.roundWins / Math.max(r.plays, 1) : -1 }))
+    .sort((a, b) => b.wr - a.wr || b.r.plays - a.r.plays);
   return (
-    <Panel className="p-6">
-      <div className="grid grid-cols-[48px_minmax(220px,2fr)_repeat(4,minmax(0,1fr))] gap-y-1 text-[15px]">
-        {["#", "Card", "Win rate", "Plays", "Duel wins", "This week"].map((h) => (
+    <Panel className="overflow-x-auto p-6">
+      <div className="grid min-w-[640px] grid-cols-[48px_minmax(220px,2fr)_repeat(4,minmax(0,1fr))] gap-y-1 text-[15px]">
+        {["#", "Card", "Win rate", "Plays", "Duel wins", "Rounds"].map((h) => (
           <div key={h} className="pb-3 text-mute">
             {h}
           </div>
         ))}
-        {CARD_RECORDS.map((r, i) => {
-          const info = infoOf(byName(r.name));
+        {rows.map(({ r, info, wr }, i) => {
           const mark = MARKS[info.lab];
           return (
-            <div key={r.name} className="col-span-6 grid grid-cols-subgrid items-center rounded-2xl py-2.5 transition hover:bg-panel-2">
-              <span className={`pl-3 font-bold ${i < 3 ? "text-neon" : "text-mute"}`}>{i + 1}</span>
-              <span className="flex items-center gap-3">
-                <span className="grid h-11 w-11 place-items-center overflow-hidden rounded-xl" style={{ background: `radial-gradient(circle at 50% 90%, ${info.main === "#1a1a1a" || info.main === "#0f0f0f" ? "#666" : info.main}, #26272c 75%)` }}>
+            <div key={r.id} className="col-span-6 grid grid-cols-subgrid items-center rounded-2xl py-2.5 transition hover:bg-panel-2">
+              <span className={`pl-3 font-bold ${i < 3 && wr >= 0 ? "text-neon" : "text-mute"}`}>{i + 1}</span>
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ background: `radial-gradient(circle at 50% 90%, ${info.main === "#1a1a1a" || info.main === "#0f0f0f" ? "#666" : info.main}, #26272c 75%)` }}>
                   <img src={artOf(info.card.name, tierOf(info))} alt="" className="pixel h-full w-full scale-125 object-contain" />
                 </span>
                 <span className="min-w-0">
@@ -109,16 +132,18 @@ function CardsTable() {
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-2 w-16 overflow-hidden rounded-full bg-panel-2">
-                  <span className="block h-full rounded-full bg-neon" style={{ width: pct(r.winRate) }} />
+                  <span className="block h-full rounded-full bg-neon" style={{ width: pct(Math.max(0, wr)) }} />
                 </span>
-                {pct(r.winRate)}
+                {wr >= 0 ? pct(wr) : "—"}
               </span>
               <span>{r.plays}</span>
-              <span>{r.duelWins}</span>
               <span>
-                <Chip tone={r.trend > 0 ? "up" : r.trend < 0 ? "down" : "flat"}>
-                  {r.trend > 0 ? "+" : ""}
-                  {r.trend}%
+                {r.liveDuelWins}
+                <span className="text-dim"> / {r.liveDuels}</span>
+              </span>
+              <span>
+                <Chip tone="flat">
+                  {r.roundWins}-{r.roundLosses}-{r.roundDraws}
                 </Chip>
               </span>
             </div>
@@ -130,13 +155,37 @@ function CardsTable() {
 }
 
 export function Ranks() {
-  const { me: ME } = useMe();
+  const { me } = useMe();
+  const { address } = useWallet();
   const nav = useNavigate();
   const onPlay = () => nav("/play");
   const [view, setView] = useState<(typeof VIEWS)[number]>("Players");
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>("season");
-  const myPlace = PLAYERS.filter((p) => p.wins > ME.wins).length + 1;
-  const next = PLAYERS[myPlace - 2];
+  const top = useTopPlayers(100);
+  const cards = useCardRecords();
+  const mine = usePlayer(address);
+  const rows = useRows(top.data ?? []);
+
+  const who = address?.toLowerCase();
+  const idx = rows.findIndex((r) => r.p.id === who);
+  const myPlace = idx >= 0 ? idx + 1 : null;
+  const next = myPlace && myPlace > 1 ? rows[myPlace - 2] : rows.length && !myPlace ? rows[rows.length - 1] : undefined;
+  const p = mine.data ?? null;
+  const rank = rankOf(p?.wins ?? 0);
+  const known = mine.status === "ok";
+
+  const playersBody =
+    top.status !== "ok" ? (
+      <Empty {...ixEmpty(top.status, "Leaderboard")} />
+    ) : rows.length === 0 ? (
+      <Empty title="No ranked players yet" body="finish a match and you are on the board." />
+    ) : (
+      <>
+        <Podium rows={rows.slice(0, 3)} />
+        <PlayersTable rows={rows} />
+      </>
+    );
+  const cardsBody =
+    cards.status !== "ok" ? <Empty {...ixEmpty(cards.status, "Card records")} /> : cards.data!.length === 0 ? <Empty title="No cards played yet" body="card records start with the first reveal." /> : <CardsTable records={cards.data!} />;
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -150,35 +199,27 @@ export function Ranks() {
               </button>
             ))}
           </nav>
-          <Seg value={period} options={PERIODS} onChange={setPeriod} />
         </div>
-        {view === "Players" ? (
-          <>
-            <Podium players={PLAYERS} />
-            <PlayersTable />
-          </>
-        ) : (
-          <CardsTable />
-        )}
+        {view === "Players" ? playersBody : cardsBody}
       </div>
 
       <aside className="flex flex-col gap-5">
         <div className="rounded-[var(--radius-panel)] bg-[linear-gradient(160deg,#2a3a0e,#1e1f23_55%)] p-5">
           <div className="text-sm text-mute">Your rank</div>
           <div className="mt-4 flex items-center gap-4">
-            <img src={avatarOf(ME, false)} alt="" className="pixel h-24 w-24 object-contain" />
+            <img src={avatarOf({ ...me, rank }, false)} alt="" className="pixel h-24 w-24 object-contain" />
             <div>
-              <div className="font-display text-5xl">#{myPlace}</div>
+              <div className="font-display text-5xl">{myPlace ? `#${myPlace}` : "—"}</div>
               <div className="text-sm text-mute capitalize">
-                {ME.cls} · {ME.rank}
+                {me.cls} · {rank}
               </div>
             </div>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
             {[
-              ["Wins", `${ME.wins}`],
-              ["Win rate", pct(rate(ME))],
-              ["Winnings", `${ME.winnings.toFixed(2)}`],
+              ["Wins", known ? `${p?.wins ?? 0}` : "—"],
+              ["Win rate", known && p && p.wins + p.losses > 0 ? pct(rate(p)) : "—"],
+              ["Winnings", known ? mon(p?.won).toFixed(2) : "—"],
             ].map(([k, v]) => (
               <div key={k} className="rounded-2xl bg-black/25 py-3">
                 <div className="text-lg font-bold">{v}</div>
@@ -186,10 +227,14 @@ export function Ranks() {
               </div>
             ))}
           </div>
-          {next && (
+          {!known ? (
+            <p className="mt-4 text-sm text-mute">{ixNote[mine.status]}</p>
+          ) : next ? (
             <p className="mt-4 text-sm text-mute">
-              {next.wins - ME.wins + 1} more wins to pass <span className="text-ink">{next.handle}</span>
+              {Math.max(0.01, mon(next.p.won) - mon(p?.won)).toFixed(2)} MON more winnings to pass <span className="text-ink">{next.face.handle}</span>
             </p>
+          ) : (
+            !myPlace && <p className="mt-4 text-sm text-mute">win a match to get on the board.</p>
           )}
           <Btn className="mt-4 w-full" onClick={onPlay}>
             Play to climb
@@ -202,26 +247,17 @@ export function Ranks() {
             Rank ladder
           </div>
           <div className="mt-4 flex flex-col gap-3">
-            {(["rookie", "trainer", "ace", "champion"] as const).map((r, i) => (
-              <div key={r} className={`flex items-center gap-3 rounded-2xl p-2 ${ME.rank === r ? "bg-neon/10" : ""}`}>
-                <img src={avatarOf({ ...ME, rank: r })} alt="" className="pixel h-12 w-12 rounded-xl bg-panel-2 object-cover" />
+            {RANKS.map((r, i) => (
+              <div key={r.name} className={`flex items-center gap-3 rounded-2xl p-2 ${rank === r.name ? "bg-neon/10" : ""}`}>
+                <img src={avatarOf({ ...me, rank: r.name })} alt="" className="pixel h-12 w-12 rounded-xl bg-panel-2 object-cover" />
                 <div className="flex-1">
-                  <div className="font-semibold capitalize">{r}</div>
+                  <div className="font-semibold capitalize">{r.name}</div>
                   <div className="text-xs text-mute">{["start here", "10 wins, scarf", "25 wins, epaulets", "50 wins, gold and a crown"][i]}</div>
                 </div>
-                {ME.rank === r && <Chip tone="up">you</Chip>}
+                {rank === r.name && <Chip tone="up">you</Chip>}
               </div>
             ))}
           </div>
-        </Panel>
-
-        <Panel className="p-5">
-          <div className="text-sm text-mute">Season 1</div>
-          <div className="mt-1 text-2xl font-bold">ends in 13 days</div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-panel-2">
-            <div className="h-full w-[57%] rounded-full bg-neon" />
-          </div>
-          <p className="mt-3 text-sm text-mute">top 3 split the season pool of 25 MON.</p>
         </Panel>
       </aside>
     </div>

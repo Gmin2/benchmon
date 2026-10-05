@@ -58,7 +58,7 @@ export function useWallet() {
       const t = performance.now();
       const data = encodeFunctionData({ abi: p.abi as Abi, functionName: p.functionName as string, args: p.args as unknown[] });
       const hash: Hex = await sendSponsored(kernel, { to: p.address, data, value: p.value ?? 0n });
-      console.log(`bm: ${String(p.functionName)} ${hash} ${(performance.now() - t).toFixed(0)}ms sponsored`);
+      if (import.meta.env.DEV) console.log(`bm: ${String(p.functionName)} ${hash} ${(performance.now() - t).toFixed(0)}ms sponsored`);
       return hash;
     },
     [kernel],

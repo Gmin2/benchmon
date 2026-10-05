@@ -1,9 +1,9 @@
-// mock data for the screens that are designed ahead of their live wiring
+// practice mode data: the bot opponents and their canned live duels. everything else reads the chain or the indexer
 import type { Card } from "./chain";
 import type { Transcript } from "./duel";
-import { ROSTER } from "./mockRoster";
 import { ARENAS } from "./rules";
 import { infoOf } from "./ui/meta";
+import { ROSTER } from "./mockRoster";
 
 export { ROSTER };
 
@@ -40,13 +40,6 @@ export const PLAYERS: Player[] = [
   { handle: "hy.player", address: "0x41fa…c0e7", cls: "scout", body: "male", rank: "rookie", wins: 8, losses: 14, winnings: 0.12, streak: 1, fav: "hy3" },
 ];
 
-export const ME: Player = { handle: "you", address: "0x3828…835D", cls: "researcher", body: "male", rank: "trainer", wins: 21, losses: 17, winnings: 2.96, streak: 2, fav: "claude-opus-5.5" };
-
-export type CardRecord = { name: string; plays: number; winRate: number; duelWins: number; trend: number };
-export const CARD_RECORDS: CardRecord[] = ROSTER.map((c, i) => {
-  const p = infoOf(c).power;
-  return { name: c.name, plays: 180 + ((i * 37) % 120), winRate: Math.min(0.78, 0.3 + (p - 130) / 600 + ((i % 3) - 1) * 0.03), duelWins: 4 + ((i * 7) % 22), trend: ((i * 13) % 9) - 4 };
-}).sort((a, b) => b.winRate - a.winRate);
 
 export type Deck = { id: string; name: string; cards: number[] };
 export const STARTER_DECKS: Deck[] = [
@@ -54,8 +47,6 @@ export const STARTER_DECKS: Deck[] = [
   { id: "speedrun", name: "Speed run", cards: [6, 10, 13, 14, 4] },
   { id: "budget", name: "Budget kings", cards: [1, 3, 4, 9, 13] },
 ];
-
-export const DECK_CAP = 1600;
 
 // a canned live duel per arena, the real one comes from the backend judge
 export function mockDuel(arena: number, a: Card, b: Card, winner: 0 | 1 | 2): Transcript {
@@ -83,14 +74,3 @@ export function mockDuel(arena: number, a: Card, b: Card, winner: 0 | 1 | 2): Tr
     outcome: winner,
   };
 }
-
-export const byName = (n: string) => ROSTER.find((c) => c.name === n)!;
-export const byId = (id: number) => ROSTER.find((c) => c.id === id)!;
-
-export type LiveMatch = { id: number; a: Player; b: Player; cardA: string; cardB: string; arena: number; round: number; winsA: number; winsB: number; pot: number; priceA: number; watchers: number; duel?: boolean };
-export const LIVE_MATCHES: LiveMatch[] = [
-  { id: 39, a: PLAYERS[0]!, b: PLAYERS[4]!, cardA: "claude-fable-5", cardB: "deepseek-v4.1-flash", arena: 2, round: 2, winsA: 1, winsB: 1, pot: 0.2, priceA: 0.64, watchers: 128, duel: true },
-  { id: 36, a: PLAYERS[1]!, b: PLAYERS[6]!, cardA: "grok-4.20", cardB: "gemini-3.8-flash", arena: 3, round: 1, winsA: 1, winsB: 0, pot: 0.1, priceA: 0.71, watchers: 54 },
-  { id: 35, a: PLAYERS[2]!, b: PLAYERS[7]!, cardA: "claude-opus-5.5", cardB: "glm-5.3", arena: 0, round: 0, winsA: 0, winsB: 0, pot: 0.5, priceA: 0.58, watchers: 211 },
-  { id: 33, a: PLAYERS[3]!, b: PLAYERS[8]!, cardA: "kimi-k3", cardB: "gpt-5.6-sol", arena: 5, round: 1, winsA: 0, winsB: 1, pot: 0.05, priceA: 0.39, watchers: 37 },
-];

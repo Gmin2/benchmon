@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DECK_CAP, LIVE_MATCHES, PLAYERS, avatarOf, byId, byName, type LiveMatch } from "../mock";
+import { avatarOf } from "../mock";
 import { ARENAS } from "../rules";
 import { GameCard } from "../ui/Card";
-import { Ico, type IcoName } from "../ui/kit";
+import { Empty, Ico, type IcoName } from "../ui/kit";
 import { artOf, infoOf, tierOf } from "../ui/meta";
 import { loadDecks } from "./Decks";
-import { short, useBalance } from "../hooks";
+import { byId, byName, deckCap, short, useBalance, useCards, usePoll } from "../hooks";
 import { useWallet } from "../useWallet";
-import { profileUrl, useMe } from "../profile";
+import { profileUrl, useMe, useProfiles } from "../profile";
 import { formatEther } from "viem";
-import { RANKS, isMine, matchesOf, openSeats, rankOf, useOwed, withdraw, type AnyWrite } from "../duel";
-import { loadMarkets } from "../market";
-import { usePoll } from "../hooks";
-import { faceOf } from "./play/parts";
+import { RANKS, isMine, openSeats, rankOf, useOwed, withdraw, type AnyWrite } from "../duel";
+import { ixEmpty, ixNote, mon, recordOf, useLiveMatches, usePlayer, usePlayerMatches, useTopPlayers, type IxMatch } from "../indexer";
+import { loadMarkets, recentIds } from "../market";
+import { faceOf, type Face } from "./play/parts";
 
 type Go = (tab: "play" | "watch" | "decks" | "ranks") => void;
 const TITLES = ["server room", "chalk hall", "library", "night track", "market", "court"];
@@ -62,24 +62,28 @@ function Account() {
   const { me, profile } = useMe();
   const { address } = useWallet();
   const balance = useBalance(address);
-  const { data: rec } = usePoll(async () => (address ? matchesOf(address) : null), 15000, [address]);
+  // the record is the indexer's, an address with no row yet simply has not played
+  const player = usePlayer(address);
+  const hist = usePlayerMatches(address);
+  const rec = player.status === "ok" ? (player.data ?? { matches: 0, wins: 0, losses: 0, draws: 0 }) : null;
+  const extra = address && hist.data ? recordOf(hist.data, address) : null;
   const [copied, setCopied] = useState(false);
 
   const wins = rec?.wins ?? 0;
-  const played = rec ? rec.wins + rec.losses + rec.draws : 0;
+  const played = rec ? rec.matches : 0;
   const rank = rankOf(wins);
   const ri = RANKS.findIndex((r) => r.name === rank);
   const next = RANKS[ri + 1];
   const from = RANKS[ri]!.at;
   const pct = next ? ((wins - from) / (next.at - from)) * 100 : 100;
-  const net = rec ? Number(formatEther(rec.net)) : 0;
+  const net = extra?.net ?? 0;
   const dash = !rec || played === 0;
   const stats: [string, string][] = [
     [rec ? String(played) : "—", "matches"],
     [rec ? String(wins) : "—", "wins"],
     [dash ? "—" : `${Math.round((wins / played) * 100)}%`, "win rate"],
-    [dash ? "—" : `${net >= 0 ? "+" : ""}${net.toFixed(2)}`, "net MON"],
-    [dash ? "—" : String(rec!.streak), "win streak"],
+    [dash || !extra ? "—" : `${net >= 0 ? "+" : ""}${net.toFixed(2)}`, "net MON"],
+    [dash || !extra ? "—" : String(extra.streak), "win streak"],
   ];
   const copy = () => {
     if (!profile) return;
@@ -128,6 +132,7 @@ function Account() {
           ))}
         </div>
         {rec && played === 0 && <p className="mt-3 text-center text-sm text-dim">your record starts with your first match</p>}
+        {!rec && player.status !== "loading" && <p className="mt-3 text-center text-sm text-dim">{ixNote[player.status]}</p>}
       </div>
 
       {/* rank ladder */}
@@ -153,9 +158,18 @@ function Account() {
 
 type Mode = { title: string; body: string; cta: string; icon: IcoName; onClick: () => void; art: React.ReactNode };
 
+// stand ins for the join art when nobody is waiting, just looks, not players
+const IDLE: Face[] = [
+  { handle: "", cls: "hacker", body: "female", rank: "rookie" },
+  { handle: "", cls: "trader", body: "male", rank: "rookie" },
+  { handle: "", cls: "builder", body: "male", rank: "rookie" },
+];
+
 function Modes({ go }: { go: Go }) {
   const nav = useNavigate();
-  const { data: seats = [] } = usePoll(() => openSeats(), 8000, []);
+  const { data: seats = [] } = usePoll(() => openSeats(), 10000, []);
+  const live = useLiveMatches();
+  const running = live.data?.length ?? 0;
   const opus = infoOf(byName("claude-opus-5.5"));
   const kimi = infoOf(byName("kimi-k3"));
   const grok = byName("grok-4.20");
@@ -185,7 +199,7 @@ function Modes({ go }: { go: Go }) {
       onClick: () => go("play"),
       art: (
         <div className="flex -space-x-5">
-          {(seats.length ? seats.slice(0, 3).map((x) => faceOf(x.m.a)) : PLAYERS.slice(3, 6)).map((p, i) => (
+          {(seats.length ? seats.slice(0, 3).map((x) => faceOf(x.m.a)) : IDLE).map((p, i) => (
             <img key={i} src={avatarOf(p, false)} alt="" className="pixel h-28 w-24 object-contain" />
           ))}
         </div>
@@ -193,7 +207,7 @@ function Modes({ go }: { go: Go }) {
     },
     {
       title: "Watch live",
-      body: `${LIVE_MATCHES.length} matches running. Back a side before the first reveal and win with them.`,
+      body: running ? `${running} ${running === 1 ? "match" : "matches"} running. Back a side before the first reveal and win with them.` : "Back a side before the first reveal and win with them. New matches show up here.",
       cta: "Watch and back",
       icon: "eye-2",
       onClick: () => go("watch"),
@@ -227,7 +241,8 @@ function Modes({ go }: { go: Go }) {
 function BetsOpen() {
   const nav = useNavigate();
   const { address } = useWallet();
-  const { data: rows = [] } = usePoll(() => loadMarkets(12), 4000, []);
+  // only matches that can still take a bet, the indexer narrows it down and the chain fills in the market
+  const { data: rows = [] } = usePoll(async () => loadMarkets(await recentIds(12, ["open", "playing"])), 8000, []);
   const open = rows.filter((r) => r.betting && !isMine(r.match, address));
   if (!open.length) return null;
   return (
@@ -261,21 +276,31 @@ function BetsOpen() {
   );
 }
 
-function LiveCard({ m, onWatch }: { m: LiveMatch; onWatch: () => void }) {
-  const a = infoOf(byName(m.cardA));
-  const b = infoOf(byName(m.cardB));
+function LiveCard({ m, onWatch }: { m: IxMatch; onWatch: () => void }) {
+  const nameOf = useProfiles([m.a, m.b ?? ""]);
+  const fa = faceOf(m.a, nameOf(m.a));
+  const fb = faceOf(m.b ?? "", nameOf(m.b ?? ""));
+  // the cards of the newest round both sides revealed, players stand in until then
+  const last = [...m.rounds].reverse().find((r) => r.cardA !== null && r.cardB !== null);
+  const a = last ? infoOf(byId(last.cardA!)) : null;
+  const b = last ? infoOf(byId(last.cardB!)) : null;
+  const arena = m.arena ?? 0;
+  const round = Math.min(2, m.rounds.reduce((x, r) => Math.max(x, r.round), 0));
+  const duel = m.rounds.some((r) => r.live);
+  const backed = mon(m.backedA) + mon(m.backedB);
+  const priceA = m.lastPriceA ? mon(m.lastPriceA) : backed > 0 ? mon(m.backedA) / backed : 0.5;
   return (
     <button onClick={onWatch} className="group relative flex w-[300px] shrink-0 flex-col overflow-hidden rounded-[28px] bg-panel text-left transition hover:-translate-y-1">
       <div className="relative h-[170px] overflow-hidden">
-        <img src={`/art/arenas/${ARENAS[m.arena]}@1x.png`} alt="" className="pixel absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" />
+        <img src={`/art/arenas/${ARENAS[arena]}@1x.png`} alt="" className="pixel absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-panel via-black/10 to-black/30" />
-        <img src={artOf(a.card.name, tierOf(a))} alt="" className="pixel absolute bottom-0 left-2 h-32 w-32 object-contain" />
-        <img src={artOf(b.card.name, tierOf(b))} alt="" className="pixel absolute right-2 bottom-0 h-32 w-32 -scale-x-100 object-contain" />
+        <img src={a ? artOf(a.card.name, tierOf(a)) : avatarOf(fa, false)} alt="" className="pixel absolute bottom-0 left-2 h-32 w-32 object-contain" />
+        <img src={b ? artOf(b.card.name, tierOf(b)) : avatarOf(fb, false)} alt="" className="pixel absolute right-2 bottom-0 h-32 w-32 -scale-x-100 object-contain" />
         <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-[#ff2d6f] px-3 py-1 text-xs font-bold text-white uppercase">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-          {m.duel ? "live duel" : "live"}
+          {duel ? "live duel" : "live"}
         </span>
-        <span className="absolute top-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur">{m.watchers} watching</span>
+        <span className="absolute top-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur">match #{m.id}</span>
         <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-xl bg-black/70 px-3 py-1 text-xl font-extrabold backdrop-blur">
           <span className="text-neon">{m.winsA}</span>
           <span className="mx-1.5 text-white/40">:</span>
@@ -285,37 +310,72 @@ function LiveCard({ m, onWatch }: { m: LiveMatch; onWatch: () => void }) {
       <div className="flex flex-col gap-3 p-4">
         <div className="flex items-center justify-between text-sm">
           <span className="flex items-center gap-2">
-            <img src={avatarOf(m.a)} alt="" className="pixel h-8 w-8 rounded-lg bg-panel-2 object-cover" />
-            <span className="max-w-[88px] truncate font-semibold">{m.a.handle}</span>
+            <img src={avatarOf(fa)} alt="" className="pixel h-8 w-8 rounded-lg bg-panel-2 object-cover" />
+            <span className="max-w-[88px] truncate font-semibold">{fa.handle}</span>
           </span>
           <span className="shrink-0 text-dim">vs</span>
           <span className="flex items-center gap-2">
-            <span className="max-w-[88px] truncate font-semibold">{m.b.handle}</span>
-            <img src={avatarOf(m.b)} alt="" className="pixel h-8 w-8 rounded-lg bg-panel-2 object-cover" />
+            <span className="max-w-[88px] truncate font-semibold">{fb.handle}</span>
+            <img src={avatarOf(fb)} alt="" className="pixel h-8 w-8 rounded-lg bg-panel-2 object-cover" />
           </span>
         </div>
         <div className="flex items-center justify-between text-xs text-mute">
           <span>
-            round {m.round + 1} · <span className="text-ink uppercase">{ARENAS[m.arena]}</span> · {TITLES[m.arena]}
+            round {round + 1} · <span className="text-ink uppercase">{ARENAS[arena]}</span> · {TITLES[arena]}
           </span>
-          <span className="font-semibold text-neon">{m.pot} MON</span>
+          <span className="font-semibold text-neon">{+(mon(m.stake) * 2).toFixed(4)} MON</span>
         </div>
         {/* who the market favours */}
         <div className="flex h-2 overflow-hidden rounded-full bg-down/40">
-          <span className="h-full bg-neon" style={{ width: `${m.priceA * 100}%` }} />
+          <span className="h-full bg-neon" style={{ width: `${priceA * 100}%` }} />
         </div>
       </div>
     </button>
   );
 }
 
+function TopPlayers({ go }: { go: Go }) {
+  const top = useTopPlayers(100);
+  const list = (top.data ?? []).slice(0, 3);
+  const nameOf = useProfiles(list.map((p) => p.id));
+  const faces = list.map((p) => ({ ...faceOf(p.id, nameOf(p.id)), rank: rankOf(p.wins), id: p.id }));
+  const podium = faces.length === 3 ? [faces[1]!, faces[0]!, faces[2]!] : faces.length === 2 ? [faces[1]!, faces[0]!] : faces;
+  const place = faces.length === 3 ? [2, 1, 3] : faces.length === 2 ? [2, 1] : [1];
+  return (
+    <section className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(160deg,#2a3a0e,#1e1f23_60%)] p-6">
+      <div className="flex items-end justify-between">
+        <h2 className="font-display text-3xl uppercase">Top players</h2>
+        <button onClick={() => go("ranks")} className="text-sm font-semibold text-mute hover:text-ink">
+          ranks ›
+        </button>
+      </div>
+      {top.status !== "ok" || !faces.length ? (
+        <Empty className="mt-4 border-white/10" {...(top.status === "ok" ? { title: "No ranked players yet", body: "win a match and take the top spot." } : ixEmpty(top.status, "Leaderboard"))} />
+      ) : (
+        <div className="mt-4 flex items-end justify-center gap-3">
+          {podium.map((p, i) => (
+            <div key={p.id} className="flex flex-col items-center">
+              <img src={avatarOf(p, false)} alt="" className={`pixel object-contain ${place[i] === 1 ? "h-32 w-32" : "h-24 w-24"}`} />
+              <div className={`mt-1 grid w-24 place-items-center rounded-t-2xl ${place[i] === 1 ? "h-20 bg-neon text-bg" : "h-14 bg-panel-2"}`}>
+                <span className="font-display text-3xl">{place[i]}</span>
+              </div>
+              <div className="mt-2 max-w-24 truncate text-sm font-semibold">{p.handle}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Home() {
   const nav = useNavigate();
   const go: Go = (t) => nav(`/${t}`);
+  useCards();
+  const live = useLiveMatches();
   const deck = useMemo(() => loadDecks()[0]!, []);
   const deckCards = deck.cards.map((id) => infoOf(byId(id)));
   const power = deckCards.reduce((a, c) => a + c.power, 0);
-  const top = PLAYERS.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-8">
@@ -338,11 +398,15 @@ export function Home() {
             see all ›
           </button>
         </div>
-        <div className="-mx-2 flex gap-5 overflow-x-auto px-2 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {LIVE_MATCHES.map((m) => (
-            <LiveCard key={m.id} m={m} onWatch={() => go("watch")} />
-          ))}
-        </div>
+        {live.status !== "ok" || !live.data!.length ? (
+          <Empty {...(live.status === "ok" ? { title: "No matches running right now", body: "start one from Play, it shows up here for everyone to watch." } : ixEmpty(live.status, "Live matches"))} />
+        ) : (
+          <div className="-mx-2 flex gap-5 overflow-x-auto px-2 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {live.data!.map((m) => (
+              <LiveCard key={m.id} m={m} onWatch={() => nav(`/watch?m=${m.id}`)} />
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -351,7 +415,7 @@ export function Home() {
             <div>
               <h2 className="font-display text-3xl uppercase">Your deck</h2>
               <div className="text-sm text-mute">
-                {deck.name} · {power} / {DECK_CAP} power
+                {deck.name} · {power} / {deckCap()} power
               </div>
             </div>
             <button onClick={() => go("decks")} className="h-11 rounded-full border-2 border-neon/70 px-5 text-sm font-bold text-neon hover:bg-neon/10">
@@ -365,25 +429,7 @@ export function Home() {
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-[36px] bg-[linear-gradient(160deg,#2a3a0e,#1e1f23_60%)] p-6">
-          <div className="flex items-end justify-between">
-            <h2 className="font-display text-3xl uppercase">Top players</h2>
-            <button onClick={() => go("ranks")} className="text-sm font-semibold text-mute hover:text-ink">
-              ranks ›
-            </button>
-          </div>
-          <div className="mt-4 flex items-end justify-center gap-3">
-            {[top[1]!, top[0]!, top[2]!].map((p, i) => (
-              <div key={p.handle} className="flex flex-col items-center">
-                <img src={avatarOf(p, false)} alt="" className={`pixel object-contain ${i === 1 ? "h-32 w-32" : "h-24 w-24"}`} />
-                <div className={`mt-1 grid w-24 place-items-center rounded-t-2xl ${i === 1 ? "h-20 bg-neon text-bg" : "h-14 bg-panel-2"}`}>
-                  <span className="font-display text-3xl">{[2, 1, 3][i]}</span>
-                </div>
-                <div className="mt-2 text-sm font-semibold">{p.handle}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <TopPlayers go={go} />
       </div>
     </div>
   );

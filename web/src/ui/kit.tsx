@@ -77,3 +77,15 @@ export function SearchBar({ placeholder = "Search", value, onChange }: { placeho
     </label>
   );
 }
+
+// lists with nothing in them yet, or a data source that is not answering
+export function Empty({ title, body, className = "" }: { title: string; body?: ReactNode; className?: string }) {
+  return (
+    <div className={`grid place-items-center rounded-[var(--radius-panel)] border border-dashed border-line px-6 py-10 text-center ${className}`}>
+      <div>
+        <div className="font-semibold">{title}</div>
+        {body && <p className="mt-1 text-sm text-mute">{body}</p>}
+      </div>
+    </div>
+  );
+}
