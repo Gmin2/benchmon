@@ -11,3 +11,4 @@ brand/concepts/
 brand/out/
 brand/logo-board.*
 .DS_Store
+backend/data/*.bak

@@ -15,6 +15,7 @@ type ChatOpts = {
   outPerM?: number;
   // openrouter reasoning settings; fighters run with it off so every model answers under the same rules
   reasoning?: Record<string, unknown>;
+  maxTokens?: number;
 };
 
 // any openai compatible chat endpoint: openrouter for the fighters, moonshot for kimi
@@ -32,7 +33,7 @@ export function chatModel(o: ChatOpts): Model {
           model: o.model,
           temperature: 0,
           // reasoning models spend hidden tokens before answering; some ignore effort low and use the whole budget
-          max_tokens: 1500,
+          max_tokens: o.maxTokens ?? 1500,
           ...(o.reasoning ? { reasoning: o.reasoning } : {}),
           messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }],
         }),

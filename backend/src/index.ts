@@ -9,7 +9,12 @@ import { liveGuard } from "./guard";
 import { rateLimiter } from "./ratelimit";
 import { checkName, claim, loadProfiles, profileByName, profileOf } from "./profiles";
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
-import { flushWrites } from "./store";
+import { flushWrites, readJson, saver } from "./store";
+import { createArena, type Verdict } from "./arena";
+import { blind, judgeBoth } from "./duel";
+import { chatModel } from "./models";
+import type { Bank } from "./bank";
+import { createHmac } from "node:crypto";
 import { boundedSet, errMsg, life, loop } from "./util";
 
 checkServerConfig();
@@ -33,6 +38,7 @@ const limits = {
   all: rateLimiter({ burst: 120, perSec: 5 }),
   pick: rateLimiter({ burst: 10, perSec: 0.2 }),
   profile: rateLimiter({ burst: 5, perSec: 0.05 }),
+  arena: rateLimiter({ burst: 40, perSec: 1 }),
 };
 
 class HttpError extends Error {
@@ -100,6 +106,35 @@ function clientIp(req: Request, server: { requestIP(r: Request): { address: stri
   return server.requestIP(req)?.address ?? "unknown";
 }
 
+// arena mode, built from data/bank.json. open tasks are judged by kimi, or deepseek when kimi is one of the two,
+// and every verdict is kept in arena-verdicts.json so a pair is only ever judged once per task
+const bankFile = Bun.file(new URL("../data/bank.json", import.meta.url).pathname);
+const bank: Bank | null = (await bankFile.exists()) ? await bankFile.json() : null;
+const verdictCache = new Map<string, Verdict>(Object.entries((await readJson<Record<string, Verdict>>(file("arena-verdicts.json"))) ?? {}));
+const saveVerdicts = saver(file("arena-verdicts.json"), () => JSON.stringify(Object.fromEntries(verdictCache)));
+const arenaJudge = (avoid: string[]) => {
+  const kimiIn = avoid.some((n) => n.startsWith("kimi"));
+  return kimiIn
+    ? { name: "deepseek-v4.1-flash", model: chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: "deepseek/deepseek-v4.1-flash", name: "deepseek", reasoning: { enabled: false }, maxTokens: 20 }) }
+    : { name: "kimi-k3", model: config.moonshotKey ? chatModel({ baseUrl: config.moonshotBase, apiKey: config.moonshotKey, model: config.judgeModel, name: "kimi", maxTokens: 20 }) : chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: "moonshotai/kimi-k3", name: "kimi", reasoning: { enabled: false }, maxTokens: 20 }) };
+};
+const arena = bank
+  ? createArena({
+      bank,
+      secret: createHmac("sha256", config.judgeKey ?? "").update("benchmon arena").digest("hex"),
+      cache: verdictCache,
+      onVerdict: () => void saveVerdicts(),
+      judgePair: async (t, lo, hi) => {
+        const names = [lo.id, hi.id].map((id) => bank.models.find((m) => m.id === id)?.name ?? "");
+        const j = arenaJudge(names);
+        const max = Math.min(lo.text.length, hi.text.length, 1200);
+        const r = await judgeBoth(j.model, t.text, blind(lo.text, names, max), blind(hi.text, names, max));
+        const reason = r.outcome === 0 ? (r.first === r.second ? `${j.name} rated them equal` : `${j.name} changed its mind when the order swapped, so it is a draw`) : `${j.name} picked it blind, in both orders`;
+        return { outcome: r.outcome, reason, judge: j.name };
+      },
+    })
+  : null;
+
 async function route(req: Request, url: URL, h: Record<string, string>): Promise<Response> {
   const json = (body: unknown, status = 200) => Response.json(body, { status, headers: h });
   if (url.pathname === "/pick" && req.method === "POST") {
@@ -141,6 +176,25 @@ async function route(req: Request, url: URL, h: Record<string, string>): Promise
     if (!(await f.exists())) return json({ error: "no transcript yet" }, 404);
     return new Response(f, { headers: { ...h, "content-type": "application/json" } });
   }
+  if (url.pathname.startsWith("/arena/")) {
+    if (!arena) return json({ error: "arena is not built" }, 503);
+    if (url.pathname === "/arena/meta") return json(arena.meta());
+    if (url.pathname === "/arena/round") {
+      const n = (k: string) => (url.searchParams.has(k) ? Number(url.searchParams.get(k)) : undefined);
+      const r = arena.deal({ task: url.searchParams.get("task") ?? undefined, arena: n("arena"), a: n("a"), b: n("b") });
+      return "error" in r ? json(r, 400) : json(r);
+    }
+    if (url.pathname === "/arena/reveal" && req.method === "POST") {
+      const b = (await readBody(req)) as { token?: unknown; winner?: unknown; model?: unknown; slot?: unknown } | null;
+      if (!b || typeof b.token !== "string") return json({ error: "token needed" }, 400);
+      const r = await arena.reveal(b.token, {
+        winner: typeof b.winner === "string" ? b.winner : undefined,
+        model: typeof b.model === "number" ? b.model : undefined,
+        slot: typeof b.slot === "string" ? b.slot : undefined,
+      });
+      return "error" in r ? json(r, 400) : json(r);
+    }
+  }
   if (url.pathname === "/health") {
     const r = await health();
     return json(r.body, r.status);
@@ -162,7 +216,7 @@ const server = Bun.serve({
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: h });
     const ip = clientIp(req, srv);
     const post = req.method === "POST";
-    const limited = !limits.all(ip) || (post && url.pathname === "/pick" && !limits.pick(ip)) || (post && url.pathname === "/profile" && !limits.profile(ip));
+    const limited = !limits.all(ip) || (post && url.pathname === "/pick" && !limits.pick(ip)) || (post && url.pathname === "/profile" && !limits.profile(ip)) || (url.pathname.startsWith("/arena/") && !limits.arena(ip));
     if (limited) return Response.json({ ok: false, error: "slow down" }, { status: 429, headers: { ...h, "retry-after": "5" } });
     try {
       return await route(req, url, h);

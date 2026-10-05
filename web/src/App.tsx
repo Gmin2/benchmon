@@ -13,6 +13,7 @@ const ProfilePage = lazy(() => import("./screens/ProfilePage").then((m) => ({ de
 const Ranks = lazy(() => import("./screens/Ranks").then((m) => ({ default: m.Ranks })));
 const Shell = lazy(() => import("./screens/Shell").then((m) => ({ default: m.Shell })));
 const Trade = lazy(() => import("./screens/Trade").then((m) => ({ default: m.Trade })));
+const Arena = lazy(() => import("./screens/Arena").then((m) => ({ default: m.Arena })));
 const Welcome = lazy(() => import("./screens/Welcome").then((m) => ({ default: m.Welcome })));
 
 // google sends people back to /home?<oauth params>. a logged out /home redirects to / before App's effect runs and
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/" element={authed ? <Navigate to="/home" replace /> : <Welcome />} />
         <Route element={authed ? <Shell /> : <Navigate to="/" replace />}>
           <Route path="/home" element={<Home />} />
+          {authed && <Route path="/arena" element={<Arena />} />}
           <Route path="/decks" element={<Decks />} />
           <Route path="/play" element={<Play />} />
           <Route path="/play/:id" element={<Play />} />
@@ -68,6 +70,8 @@ export default function App() {
           <Route path="/ranks" element={<Ranks />} />
           {authed && <Route path="/:at" element={<ProfilePage />} />}
         </Route>
+        {/* arena needs no account, guests get it full screen */}
+        {!authed && <Route path="/arena" element={<Arena standalone />} />}
         {/* shared profile links work for anyone, logged in or not */}
         {!authed && <Route path="/:at" element={<ProfilePage standalone />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
