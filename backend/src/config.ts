@@ -52,6 +52,9 @@ export const config = {
   trustProxy: env("TRUST_PROXY") === "1",
   liveDuelMinStake: env("LIVE_DUEL_MIN_STAKE") ?? "0.01",
   liveDuelsPerDay: Number(env("LIVE_DUELS_PER_DAY") ?? 20),
+  // arena "ask your own" on our key: free questions per visitor per day, and the most it may spend in a day
+  askPerDay: Number(env("ASK_PER_DAY") ?? 3),
+  askBudgetUsd: Number(env("ASK_BUDGET_USD") ?? 2),
   contracts: {
     cards: addr("CARDS", "0xD27730D0482746B1e0BD702429C2A9AB98d141Fb"),
     duel: addr("DUEL", "0xC110B9Ee0845Ed76D722Ccec3111302D56d1cA61"),

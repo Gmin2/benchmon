@@ -12,6 +12,8 @@ import { addBuiltin, checkName, claim, loadProfiles, profileByName, profileOf } 
 import { addPick, loadPicks, parsePick, relayLoop } from "./relay";
 import { flushWrites, readJson, saver } from "./store";
 import { createArena, type Verdict } from "./arena";
+import { createAsk, type AskState } from "./ask";
+import roster from "./roster.json";
 import { blind, judgeBoth } from "./duel";
 import { chatModel } from "./models";
 import type { Bank } from "./bank";
@@ -40,6 +42,7 @@ const limits = {
   pick: rateLimiter({ burst: 10, perSec: 0.2 }),
   profile: rateLimiter({ burst: 5, perSec: 0.05 }),
   arena: rateLimiter({ burst: 40, perSec: 1 }),
+  ask: rateLimiter({ burst: 4, perSec: 0.1 }),
 };
 
 class HttpError extends Error {
@@ -137,7 +140,36 @@ const arena = bank
     })
   : null;
 
-async function route(req: Request, url: URL, h: Record<string, string>): Promise<Response> {
+// arena "ask your own" on our key. the visitor key is a salted hash of the ip, see ask.ts
+const askFile = file("ask-quota.json");
+const saveAsk = saver(askFile, () => JSON.stringify(askState));
+let askState: AskState | undefined = await readJson<AskState>(askFile);
+const askModels = roster.map((r) => ({ id: r.id, name: r.name, lab: r.lab }));
+const ask = createAsk({
+  models: askModels,
+  perDay: config.askPerDay,
+  budgetUsd: config.askBudgetUsd,
+  salt: createHmac("sha256", config.judgeKey ?? "").update("benchmon ask").digest("hex"),
+  state: askState,
+  onChange: (s) => {
+    askState = s;
+    void saveAsk();
+  },
+  answer: (m, prompt) => {
+    const r = roster.find((x) => x.id === m.id)!;
+    return chatModel({ baseUrl: "https://openrouter.ai/api/v1", apiKey: config.openrouterKey, model: r.openrouter, name: r.name, reasoning: r.reasoning, maxTokens: 600 }).ask(prompt);
+  },
+  judge: async (prompt, lo, hi) => {
+    const names = [lo.name, hi.name];
+    const j = arenaJudge(names);
+    const max = Math.min(lo.text.length, hi.text.length, 1200);
+    const r = await judgeBoth(j.model, prompt, blind(lo.text, names, max), blind(hi.text, names, max));
+    const reason = r.outcome === 0 ? (r.first === r.second ? `${j.name} rated them equal` : `${j.name} changed its mind when the order swapped, so it is a draw`) : `${j.name} picked it blind, in both orders`;
+    return { outcome: r.outcome, reason, judge: j.name };
+  },
+});
+
+async function route(req: Request, url: URL, h: Record<string, string>, ip = ""): Promise<Response> {
   const json = (body: unknown, status = 200) => Response.json(body, { status, headers: h });
   if (url.pathname === "/pick" && req.method === "POST") {
     const p = parsePick(await readBody(req));
@@ -180,7 +212,28 @@ async function route(req: Request, url: URL, h: Record<string, string>): Promise
   }
   if (url.pathname.startsWith("/arena/")) {
     if (!arena) return json({ error: "arena is not built" }, 503);
-    if (url.pathname === "/arena/meta") return json(arena.meta());
+    if (url.pathname === "/arena/meta") {
+      // openrouter ids and settings let a player who brings a key run the same models from the browser
+      const extra = Object.fromEntries(roster.map((r) => [r.id, { openrouter: r.openrouter, reasoning: r.reasoning ?? null }]));
+      const m = arena.meta();
+      return json({ ...m, models: m.models.map((x) => ({ ...x, ...extra[x.id] })) });
+    }
+    if (url.pathname === "/arena/quota") return json(ask.quota(ip));
+    if (url.pathname === "/arena/ask" && req.method === "POST") {
+      const b = (await readBody(req)) as { prompt?: unknown; a?: unknown; b?: unknown } | null;
+      const r = await ask.ask(ip, { prompt: b?.prompt, a: typeof b?.a === "number" ? b.a : undefined, b: typeof b?.b === "number" ? b.b : undefined });
+      return "error" in r ? json({ ...r, quota: ask.quota(ip) }, 400) : json(r);
+    }
+    if (url.pathname === "/arena/ask/reveal" && req.method === "POST") {
+      const b = (await readBody(req)) as { id?: unknown; winner?: unknown; model?: unknown; slot?: unknown } | null;
+      if (!b || typeof b.id !== "string") return json({ error: "id needed" }, 400);
+      const r = await ask.reveal(b.id, {
+        winner: typeof b.winner === "string" ? b.winner : undefined,
+        model: typeof b.model === "number" ? b.model : undefined,
+        slot: typeof b.slot === "string" ? b.slot : undefined,
+      });
+      return "error" in r ? json(r, 400) : json(r);
+    }
     if (url.pathname === "/arena/round") {
       const n = (k: string) => (url.searchParams.has(k) ? Number(url.searchParams.get(k)) : undefined);
       const r = arena.deal({ task: url.searchParams.get("task") ?? undefined, arena: n("arena"), a: n("a"), b: n("b") });
@@ -230,10 +283,10 @@ const server = Bun.serve({
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: h });
     const ip = clientIp(req, srv);
     const post = req.method === "POST";
-    const limited = !limits.all(ip) || (post && url.pathname === "/pick" && !limits.pick(ip)) || (post && url.pathname === "/profile" && !limits.profile(ip)) || (url.pathname.startsWith("/arena/") && !limits.arena(ip));
+    const limited = !limits.all(ip) || (post && url.pathname === "/pick" && !limits.pick(ip)) || (post && url.pathname === "/profile" && !limits.profile(ip)) || (url.pathname.startsWith("/arena/") && !limits.arena(ip)) || (post && url.pathname === "/arena/ask" && !limits.ask(ip));
     if (limited) return Response.json({ ok: false, error: "slow down" }, { status: 429, headers: { ...h, "retry-after": "5" } });
     try {
-      return await route(req, url, h);
+      return await route(req, url, h, ip);
     } catch (e) {
       if (e instanceof HttpError) return Response.json({ ok: false, error: e.message }, { status: e.status, headers: h });
       console.error(`${req.method} ${url.pathname}: ${errMsg(e)}`);
