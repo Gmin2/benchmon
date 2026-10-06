@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { dealRound, loadScore, revealRound, saveScore, scoreRound, type ArenaModel, type Call, type Reveal, type Round, type Score, type Slot } from "../arena";
+import { arenaMeta, askOwnKey, askQuota, askServer, dealRound, loadKey, loadScore, revealAsk, revealRound, saveKey, saveScore, scoreRound, type ArenaModel, type Call, type MetaModel, type Quota, type Reveal, type Round, type Score, type Slot } from "../arena";
 import { roster } from "../hooks";
 import { ARENAS } from "../rules";
 import { Logo } from "../ui/brand";
@@ -10,7 +10,8 @@ import { Mon } from "../ui/Mon";
 import { artOf, displayName, infoOf, tierOf } from "../ui/meta";
 import { LoginDialog } from "./landing/LoginDialog";
 
-type Mode = "blind" | "pick";
+type Mode = "blind" | "pick" | "ask";
+type Guess = { winner?: Call; model?: number; slot?: Slot };
 const CATS = ["any", ...ARENAS] as const;
 
 const art = (name: string) => {
@@ -76,7 +77,14 @@ function Answer({ slot, round, reveal, call, spotPick }: { slot: Slot; round: Ro
   );
 }
 
-function Setup({ mode, setMode, cat, setCat, pickA, pickB, setPick, onDeal, busy }: {
+function Setup({ mode, setMode, cat, setCat, pickA, pickB, setPick, onDeal, busy, question, setQuestion, askPick, setAskPick, quota, ownKey, setOwnKey }: {
+  question: string;
+  setQuestion: (q: string) => void;
+  askPick: boolean;
+  setAskPick: (v: boolean) => void;
+  quota: Quota | null;
+  ownKey: string;
+  setOwnKey: (k: string) => void;
   mode: Mode;
   setMode: (m: Mode) => void;
   cat: (typeof CATS)[number];
@@ -87,29 +95,98 @@ function Setup({ mode, setMode, cat, setCat, pickA, pickB, setPick, onDeal, busy
   onDeal: () => void;
   busy: boolean;
 }) {
-  const ready = mode === "blind" || (pickA !== null && pickB !== null);
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const showGrid = mode === "pick" || (mode === "ask" && askPick);
+  const pairOk = pickA !== null && pickB !== null;
+  const outOfFree = mode === "ask" && !ownKey && quota !== null && (quota.left === 0 || !quota.open);
+  const ready = mode === "blind" || (mode === "pick" && pairOk) || (mode === "ask" && question.trim().length >= 3 && (!askPick || pairOk) && !outOfFree);
+  const label = busy ? (mode === "ask" ? "Both models are answering live…" : "Dealing…") : mode === "ask" ? (outOfFree ? "Add your key to keep asking" : askPick && !pairOk ? "Pick two models" : "Ask both models") : mode === "pick" && !pairOk ? "Pick two models" : "Deal a round";
   return (
     <Panel className="p-5 md:p-7">
       <div className="flex flex-wrap items-center gap-2">
-        {(["blind", "pick"] as const).map((m) => (
+        {(["blind", "pick", "ask"] as const).map((m) => (
           <button key={m} onClick={() => setMode(m)} className={`h-11 rounded-full px-5 text-sm font-bold transition ${mode === m ? "bg-neon text-bg" : "bg-panel-2 text-mute hover:text-ink"}`}>
-            {m === "blind" ? "Blind round" : "Pick two models"}
+            {m === "blind" ? "Blind round" : m === "pick" ? "Pick two models" : "Ask your own"}
           </button>
         ))}
       </div>
       <p className="mt-3 text-sm text-mute">
-        {mode === "blind" ? "Two random models answer the same task. You call the winner before kimi does, then spot which one is which." : "Choose two models and call which answer kimi will prefer."}
+        {mode === "blind"
+          ? "Two random models answer the same task. You call the winner before kimi does, then spot which one is which."
+          : mode === "pick"
+            ? "Choose two models and call which answer kimi will prefer."
+            : "Write any question. Two models answer it live, kimi judges blind, you call it first."}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      {mode === "ask" && (
+        <div className="mt-5 space-y-4">
+          <div>
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value.slice(0, 500))}
+              rows={3}
+              placeholder="e.g. Explain recursion to a five year old in two sentences."
+              className="w-full resize-none rounded-2xl border border-line bg-panel-2 p-4 text-[15px] outline-none placeholder:text-dim focus:border-neon/50"
+            />
+            <div className="mt-1 flex justify-between text-xs text-dim">
+              <span>{ownKey ? "on your openrouter key, no limit" : quota ? (quota.open ? `${quota.left} of ${quota.limit} free live questions left today` : "free live questions are paused for today") : "checking your free questions…"}</span>
+              <span>{question.length}/500</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[false, true].map((v) => (
+              <button key={String(v)} onClick={() => setAskPick(v)} className={`h-9 rounded-full border px-4 text-sm transition ${askPick === v ? "border-neon/60 bg-neon/10 text-neon" : "border-line text-mute hover:text-ink"}`}>
+                {v ? "I pick the two models" : "Two random models, blind"}
+              </button>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-line p-4">
+            {ownKey ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-mute">
+                  Using your OpenRouter key <span className="font-mono text-ink">…{ownKey.slice(-4)}</span>. It stays in this browser and goes only to OpenRouter.
+                </span>
+                <button
+                  onClick={() => {
+                    setOwnKey("");
+                    setDraft("");
+                    setKeyOpen(false);
+                  }}
+                  className="text-down hover:underline"
+                >
+                  remove key
+                </button>
+              </div>
+            ) : keyOpen ? (
+              <div className="space-y-2">
+                <p className="text-sm text-mute">Your key stays in this browser. The questions go straight from here to OpenRouter, benchmon never sees the key.</p>
+                <div className="flex gap-2">
+                  <input type="password" value={draft} onChange={(e) => setDraft(e.target.value.trim())} placeholder="sk-or-…" className="min-w-0 flex-1 rounded-xl border border-line bg-panel-2 px-3 font-mono text-sm outline-none focus:border-neon/50" />
+                  <Btn onClick={() => draft.startsWith("sk-") && setOwnKey(draft)} disabled={!draft.startsWith("sk-")}>
+                    Use key
+                  </Btn>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setKeyOpen(true)} className="text-sm text-mute hover:text-ink">
+                {outOfFree ? "Out of free questions today. " : ""}
+                <span className="text-neon underline-offset-2 hover:underline">Use my own OpenRouter key</span> for unlimited questions
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {mode !== "ask" && <div className="mt-5 flex flex-wrap gap-2">
         {CATS.map((c) => (
           <button key={c} onClick={() => setCat(c)} className={`h-9 rounded-full border px-4 text-sm capitalize transition ${cat === c ? "border-neon/60 bg-neon/10 text-neon" : "border-line text-mute hover:text-ink"}`}>
             {c}
           </button>
         ))}
-      </div>
+      </div>}
 
-      {mode === "pick" && (
+      {showGrid && (
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {roster().map((c) => {
             const on = c.id === pickA || c.id === pickB;
@@ -124,8 +201,9 @@ function Setup({ mode, setMode, cat, setCat, pickA, pickB, setPick, onDeal, busy
       )}
 
       <div className="mt-6">
-        <Btn size="lg" onClick={onDeal} disabled={!ready || busy}>
-          {busy ? "Dealing…" : mode === "pick" && !ready ? "Pick two models" : "Deal a round"}
+        {/* out of free questions: the button opens the key box instead of sitting disabled */}
+        <Btn size="lg" onClick={outOfFree ? () => setKeyOpen(true) : onDeal} disabled={outOfFree ? false : !ready || busy}>
+          {label}
         </Btn>
       </div>
     </Panel>
@@ -146,8 +224,24 @@ export function Arena({ standalone = false }: { standalone?: boolean }) {
   const [score, setScore] = useState<Score>(loadScore);
   const [login, setLogin] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [askPick, setAskPick] = useState(false);
+  const [quota, setQuota] = useState<Quota | null>(null);
+  const [ownKey, setOwnKeyState] = useState(loadKey);
+  const [meta, setMeta] = useState<MetaModel[]>([]);
+  // how this round gets revealed: the bank, our key on the server, or the player's key in this browser
+  const [revealer, setRevealer] = useState<{ run: (g: Guess) => Promise<Reveal> } | null>(null);
 
   useEffect(() => saveScore(score), [score]);
+  const setOwnKey = (k: string) => {
+    saveKey(k);
+    setOwnKeyState(k);
+  };
+  useEffect(() => {
+    if (mode !== "ask") return;
+    askQuota().then(setQuota).catch(() => setQuota(null));
+    if (!meta.length) arenaMeta().then((m) => setMeta(m.models as MetaModel[])).catch(() => {});
+  }, [mode, meta.length]);
 
   const setPick = (id: number) => {
     if (id === pickA) return setPickA(pickB), setPickB(null);
@@ -163,10 +257,28 @@ export function Arena({ standalone = false }: { standalone?: boolean }) {
     setCall(null);
     setSpotPick(null);
     try {
+      if (mode === "ask") {
+        const q = { prompt: question.trim(), ...(askPick && pickA !== null && pickB !== null ? { a: pickA, b: pickB } : {}) };
+        if (ownKey) {
+          const models = meta.length ? meta : ((await arenaMeta()).models as MetaModel[]);
+          const r = await askOwnKey(ownKey, models, q);
+          setRevealer({ run: r.reveal });
+          setRound(r.round);
+        } else {
+          const r = await askServer(q);
+          setRevealer({ run: (g) => revealAsk(r.id!, g) });
+          if (r.quota) setQuota(r.quota);
+          setRound(r);
+        }
+        return;
+      }
       const arena = cat === "any" ? undefined : ARENAS.indexOf(cat);
       const q = mode === "pick" && pickA !== null && pickB !== null ? { arena, a: pickA, b: pickB } : { arena };
-      setRound(await dealRound(q));
+      const r = await dealRound(q);
+      setRevealer({ run: (g) => revealRound(r.token, g) });
+      setRound(r);
     } catch (e) {
+      if (mode === "ask" && !ownKey) askQuota().then(setQuota).catch(() => {});
       setErr((e as Error).message);
     } finally {
       setBusy(false);
@@ -174,11 +286,11 @@ export function Arena({ standalone = false }: { standalone?: boolean }) {
   }
 
   async function lockIn() {
-    if (!round || !call) return;
+    if (!round || !call || !revealer) return;
     setBusy(true);
     setErr("");
     try {
-      const r = await revealRound(round.token, { winner: call, ...(round.spot && spotPick ? { model: round.spot.id, slot: spotPick } : {}) });
+      const r = await revealer.run({ winner: call, ...(round.spot && spotPick ? { model: round.spot.id, slot: spotPick } : {}) });
       setReveal(r);
       setScore((s) => scoreRound(s, r));
     } catch (e) {
@@ -228,12 +340,12 @@ export function Arena({ standalone = false }: { standalone?: boolean }) {
         </div>
       </div>
 
-      {!round && <Setup mode={mode} setMode={setMode} cat={cat} setCat={setCat} pickA={pickA} pickB={pickB} setPick={setPick} onDeal={deal} busy={busy} />}
+      {!round && <Setup mode={mode} setMode={setMode} cat={cat} setCat={setCat} pickA={pickA} pickB={pickB} setPick={setPick} onDeal={deal} busy={busy} question={question} setQuestion={setQuestion} askPick={askPick} setAskPick={setAskPick} quota={quota} ownKey={ownKey} setOwnKey={setOwnKey} />}
 
       {round && (
         <Panel className="p-5 md:p-7">
           <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-mute">
-            <Chip tone="flat">{ARENAS[round.task.arena]}</Chip>
+            <Chip tone="flat">{round.task.arena < 0 ? "your question" : ARENAS[round.task.arena]}</Chip>
             <span>same task, same rules for both</span>
           </div>
           <Md text={round.task.text} className="text-xl font-semibold md:text-2xl" />
@@ -309,9 +421,9 @@ export function Arena({ standalone = false }: { standalone?: boolean }) {
                 )}
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
-                <Btn onClick={deal} disabled={busy}>
+                <Btn onClick={() => (mode === "ask" ? (setRound(null), setReveal(null), setCall(null), setSpotPick(null)) : deal())} disabled={busy}>
                   <Ico name="refresh" className="h-4 w-4" />
-                  Next round
+                  {mode === "ask" ? "Ask another" : "Next round"}
                 </Btn>
                 {score.best > 0 && (
                   <Btn kind="ghost" onClick={share}>
