@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { encodeFunctionData, type Abi, type Address, type ContractFunctionName, type Hex } from "viem";
 import { isEvmWalletAccount } from "@dynamic-labs-sdk/evm";
 import { createWalletClientForWalletAccount } from "@dynamic-labs-sdk/evm/viem";
+import { createWaasWalletAccounts, shouldAutoCreateWalletForChain } from "@dynamic-labs-sdk/client/waas";
 import { useGetWalletAccounts } from "@dynamic-labs-sdk/react-hooks";
 import { sendSponsored, smartWalletFor, type SmartWallet } from "./gas";
 import { DEV, devSigner } from "./dev";
@@ -16,6 +17,32 @@ export function useWallet() {
   const building = useRef<string>("");
 
   const dev = useRef(DEV ? devSigner() : null);
+  const creating = useRef(false);
+
+  // the headless sdk never makes the embedded wallet by itself, even with automatic creation on in the
+  // dashboard: a brand new account has none until we ask for it here
+  useEffect(() => {
+    if (DEV || !isFetched || evm || creating.current) return;
+    let ok = false;
+    try {
+      ok = shouldAutoCreateWalletForChain({ chain: "EVM" });
+    } catch {
+      ok = false;
+    }
+    if (!ok) return;
+    creating.current = true;
+    createWaasWalletAccounts({ chains: ["EVM"] }).catch((e: Error) => {
+      creating.current = false;
+      setErr(e.message || "could not create your wallet");
+    });
+  }, [isFetched, evm]);
+
+  // never spin forever: if no wallet shows up, say so and offer a retry
+  useEffect(() => {
+    if (DEV || kernel || err) return;
+    const t = setTimeout(() => setErr("making your wallet is taking longer than it should"), 45_000);
+    return () => clearTimeout(t);
+  }, [kernel, err]);
 
   useEffect(() => {
     const d = dev.current;
