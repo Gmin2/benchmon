@@ -1,6 +1,6 @@
 import { encodeAbiParameters, isAddress, keccak256, type Address, type Hex } from "viem";
 import { duelAbi } from "./abi";
-import { fitGas, pub, signer } from "./chain";
+import { fitGas, getMatches, pub, signer, type Match } from "./chain";
 import { config, file } from "./config";
 import { readJson, saver } from "./store";
 import { errMsg, loop } from "./util";
@@ -69,8 +69,7 @@ async function drop(k: string) {
   await persist();
 }
 
-async function relayOne(k: string, p: Pick) {
-  const m = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [p.id] });
+async function relayOne(k: string, p: Pick, m: Match) {
   const isA = m.a.toLowerCase() === p.player.toLowerCase();
   const revealed = isA ? m.revealedA : m.revealedB;
   if (m.state !== 1 || m.round !== p.round || revealed) return drop(k);
@@ -89,9 +88,12 @@ async function relayOne(k: string, p: Pick) {
 async function tick() {
   const failed: [string, string][] = [];
   const tried = picks.size;
+  if (!tried) return;
+  // every match with a pending pick in one read
+  const ms = await getMatches([...new Set([...picks.values()].map((p) => p.id))]);
   for (const [k, p] of [...picks]) {
     try {
-      await relayOne(k, p);
+      await relayOne(k, p, ms.get(p.id.toString())!);
       fails.delete(k);
     } catch (e) {
       failed.push([k, errMsg(e)]);

@@ -11,14 +11,26 @@ const LN2 = 693147180559945310n;
 const done = boundedSet(5000);
 const fails = new Map<string, number>();
 
-async function tend(id: bigint, seed: bigint) {
+type Seen = { mk: readonly [bigint, bigint, bigint, bigint, bigint, boolean, ...unknown[]]; open: boolean; result: number };
+
+// the three reads tend needs, for every match in one multicall
+async function readAll(ids: bigint[]): Promise<Map<string, Seen>> {
+  if (!ids.length) return new Map();
+  const res = await pub.multicall({
+    contracts: ids.flatMap((id) => [
+      { address: config.contracts.market, abi: matchMarketAbi, functionName: "markets", args: [id] } as const,
+      { address: config.contracts.duel, abi: duelAbi, functionName: "bettingOpen", args: [id] } as const,
+      { address: config.contracts.duel, abi: duelAbi, functionName: "resultOf", args: [id] } as const,
+    ]),
+    allowFailure: false,
+  });
+  return new Map(ids.map((id, i) => [id.toString(), { mk: res[i * 3] as unknown as Seen["mk"], open: res[i * 3 + 1] as boolean, result: Number(res[i * 3 + 2]) }]));
+}
+
+async function tend(id: bigint, seed: bigint, seen: Seen) {
   const key = id.toString();
   const house = signer("house");
-  const [mk, open, result] = await Promise.all([
-    pub.readContract({ address: config.contracts.market, abi: matchMarketAbi, functionName: "markets", args: [id] }),
-    pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "bettingOpen", args: [id] }),
-    pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "resultOf", args: [id] }),
-  ]);
+  const { mk, open, result } = seen;
   const [mb, , , , , settled] = mk;
   if (mb === 0n) {
     if (!open) return done.add(key);
@@ -47,12 +59,14 @@ export function houseLoop(scan = 30n) {
       const count = await pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "matchCount" });
       let tried = 0;
       const failed: [string, string][] = [];
-      for (let id = count > scan ? count - scan : 0n; id < count; id++) {
+      const ids: bigint[] = [];
+      for (let id = count > scan ? count - scan : 0n; id < count; id++) if (!done.has(id.toString())) ids.push(id);
+      const seenAll = await readAll(ids);
+      for (const id of ids) {
         const key = id.toString();
-        if (done.has(key)) continue;
         tried++;
         try {
-          await tend(id, seed);
+          await tend(id, seed, seenAll.get(key)!);
           fails.delete(key);
         } catch (e) {
           failed.push([key, errMsg(e)]);

@@ -1,6 +1,7 @@
 import { createPublicClient, createWalletClient, defineChain, http, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "./config";
+import { duelAbi } from "./abi";
 import { txQueue } from "./txq";
 
 export const monadTestnet = defineChain({
@@ -46,4 +47,17 @@ export const activeSigners = () => [...signers.values()];
 export async function fitGas(account: Address, c: { address: Address; abi: Abi; functionName: string; args?: readonly unknown[]; value?: bigint }) {
   const g = await pub.estimateContractGas({ ...c, account } as never);
   return g + g / 5n + 5_000n;
+}
+
+export type Match = Awaited<ReturnType<typeof readMatch>>;
+const readMatch = (id: bigint) => pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
+
+// many matches in one multicall instead of one call each, the loops read the same 30 to 40 matches every few seconds
+export async function getMatches(ids: bigint[]): Promise<Map<string, Match>> {
+  if (!ids.length) return new Map();
+  const res = await pub.multicall({
+    contracts: ids.map((id) => ({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [id] }) as const),
+    allowFailure: false,
+  });
+  return new Map(ids.map((id, i) => [id.toString(), res[i] as Match]));
 }
