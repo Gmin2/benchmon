@@ -3,10 +3,9 @@ import { cardStatsAbi, duelAbi } from "./abi";
 import { INDEXER, matchIds } from "./indexer";
 import type { Stats } from "./rules";
 
-// alchemy first: the public monad rpc caps a client at 15 requests a second
-export const RPC = import.meta.env.VITE_ALCHEMY_API_KEY
-  ? `https://monad-testnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY}`
-  : "https://testnet-rpc.monad.xyz";
+// reads go to the public monad rpc: each player's browser gets its own 15 requests a second, and the alchemy
+// key is kept for the smart account and gas sponsorship only, so reads can never burn its monthly capacity
+export const RPC = import.meta.env.VITE_RPC_URL || "https://testnet-rpc.monad.xyz";
 // batch calls into one json-rpc request
 export const pub = createPublicClient({ transport: http(RPC, { batch: { wait: 30 } }) });
 
