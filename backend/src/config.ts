@@ -23,7 +23,9 @@ const repoTmp = new URL("../../tmp/duels/", import.meta.url).pathname;
 
 export const config = {
   // alchemy when a key is set, the public rpc caps a client at 15 requests a second
-  rpcUrl: env("ALCHEMY_RPC") ?? (env("VITE_ALCHEMY_API_KEY") ? `https://monad-testnet.g.alchemy.com/v2/${env("VITE_ALCHEMY_API_KEY")}` : (env("RPC_URL") ?? "https://testnet-rpc.monad.xyz")),
+  // the public rpc unless one is set on purpose. the alchemy key is never used here: the loops below run all day
+  // and burned its whole monthly capacity once
+  rpcUrl: env("ALCHEMY_RPC") ?? env("RPC_URL") ?? "https://testnet-rpc.monad.xyz",
   port: Number(env("PORT") ?? 8788),
   // one key per onchain role: judge posts verdicts, relayer reveals picks, house runs the markets
   judgeKey: key("JUDGE_KEY"),

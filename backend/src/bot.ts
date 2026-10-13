@@ -3,7 +3,7 @@
 // before the commit lands and revealed even across a restart.
 import { encodeAbiParameters, formatEther, keccak256, toHex, type Address, type Hex } from "viem";
 import { cardStatsAbi, duelAbi } from "./abi";
-import { fitGas, pub, signer } from "./chain";
+import { fitGas, getMatches, pub, signer, type Match } from "./chain";
 import { config, parseAmount } from "./config";
 import { addPick } from "./relay";
 import { botArena, botCard, botDeck, idsOf, type CardStat } from "./botplay";
@@ -18,8 +18,7 @@ const firstSeen = new Map<string, number>();
 const done = boundedSet(5000);
 const fails = new Map<string, number>();
 
-type M = Awaited<ReturnType<typeof getMatch>>;
-const getMatch = (id: bigint) => pub.readContract({ address: config.contracts.duel, abi: duelAbi, functionName: "getMatch", args: [id] });
+type M = Match;
 
 async function statsAt(ids: number[], v: bigint): Promise<CardStat[]> {
   const res = await pub.multicall({
@@ -104,11 +103,15 @@ async function tick() {
   const now = block.timestamp;
   let active = 0;
   const failed: string[] = [];
-  for (let id = count > 40n ? count - 40n : 0n; id < count; id++) {
+  const ids: bigint[] = [];
+  for (let id = count > 40n ? count - 40n : 0n; id < count; id++) if (!done.has(id.toString())) ids.push(id);
+  // every match the bot still cares about in one read
+  const all = await getMatches(ids);
+  for (const id of ids) {
     const key = id.toString();
     if (done.has(key)) continue;
     try {
-      const m = await getMatch(id);
+      const m = all.get(key)!;
       if (m.state === 2) {
         done.add(key);
         continue;
